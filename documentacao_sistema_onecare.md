@@ -1,0 +1,1070 @@
+# Especificação do Sistema OneCare
+
+## 1. Objetivo
+
+Desenvolver um sistema web para controle de equipamentos vinculados a contratos OneCare.
+
+O sistema deve permitir cadastrar equipamentos, acompanhar os contratos, visualizar os prazos de cobertura, identificar contratos próximos do vencimento e centralizar as informações necessárias para consulta e gestão.
+
+O projeto deve ser desenvolvido de forma organizada, modular e preparada para futuras expansões.
+
+## 2. Objetivos principais
+
+O sistema deverá permitir:
+
+1. Cadastrar equipamentos.
+2. Alterar informações dos equipamentos.
+3. Excluir equipamentos.
+4. Consultar equipamentos.
+5. Pesquisar por número de série, part number, cliente, patrimônio e contrato.
+6. Controlar início e término do contrato OneCare.
+7. Exibir quanto tempo falta para o vencimento.
+8. Identificar contratos vencidos.
+9. Identificar contratos próximos do vencimento.
+10. Gerar notificações quando faltarem aproximadamente 3 meses para o vencimento.
+11. Exibir indicadores gerais em um dashboard.
+12. Manter informações de criação e alteração dos registros.
+13. Possibilitar futuras integrações e expansão do sistema.
+
+## 3. Tecnologias
+
+### Backend
+- Node.js
+- Fastify
+- Prisma ORM
+- MySQL
+
+### Frontend
+- React
+- Vite
+- Tailwind CSS
+- JavaScript
+
+Não utilizar TypeScript na V1.
+Não utilizar frameworks CSS como Bootstrap ou Material UI na V1, salvo autorização explícita.
+
+### Controle de versão
+- Git
+- GitHub
+
+### Desenvolvimento
+O projeto deve ser compatível com Windows 11 e funcionar adequadamente pelo terminal integrado do VS Code.
+
+## 4. Estrutura esperada do projeto
+
+```text
+onecare-system/
+│
+├── backend/
+│   ├── src/
+│   │   ├── controllers/
+│   │   ├── routes/
+│   │   ├── services/
+│   │   ├── utils/
+│   │   ├── middlewares/
+│   │   └── server.*
+│   │
+│   ├── prisma/
+│   │   └── schema.prisma
+│   │
+│   ├── package.json
+│   └── .env
+│
+├── frontend/
+│   ├── src/
+│   │   ├── components/
+│   │   ├── pages/
+│   │   ├── services/
+│   │   ├── hooks/
+│   │   └── App.*
+│   │
+│   ├── package.json
+│   └── vite.config.*
+│
+├── README.md
+├── AGENTS.md
+├── .gitignore
+└── documentacao_sistema_onecare.md
+```
+
+A estrutura pode ser ajustada pelo agente quando houver uma justificativa técnica clara.
+
+## 5. Cadastro de equipamentos
+
+Cada equipamento deverá possuir, no mínimo:
+
+| Campo | Descrição | Obrigatório |
+|---|---|---|
+| ID | Identificador interno | Sim |
+| Número de Série | Serial Number do equipamento | Sim |
+| Part Number | Modelo/código do fabricante | Sim |
+| Cliente | Cliente ao qual o equipamento está vinculado | Sim |
+| Patrimônio | Número de patrimônio do cliente | Não |
+| Contrato OneCare | Número do contrato | Não |
+| Data de início OneCare | Início da cobertura | Sim |
+| Data de término OneCare | Final da cobertura | Sim |
+| Data da última conferência | Quando os dados foram conferidos na fonte original | Não |
+| Arquivado | Indica se o equipamento foi retirado das listagens operacionais | Automático |
+| Data de arquivamento | Data em que o equipamento foi arquivado | Automático |
+| Data de criação | Data de criação do registro | Automático |
+| Data de atualização | Data da última alteração | Automático |
+
+### Regras
+- O número de série deve ser único.
+- O número de série deve ser normalizado para maiúsculas e aceitar somente letras de `A` a `Z` e números de `0` a `9`, sem espaços ou caracteres especiais.
+- A data de término não pode ser anterior à data de início.
+- Campos obrigatórios devem ser validados no backend.
+- O frontend também deve apresentar validações para melhorar a experiência do usuário.
+- O banco deve utilizar tipos apropriados para datas.
+- Não armazenar no banco valores que podem ser calculados dinamicamente, como dias restantes.
+
+## 6. Modelo da relação entre equipamento e contrato
+
+### Escopo da V1
+
+Na primeira versão, somente equipamentos que possuem ou já possuíram cobertura OneCare serão cadastrados. Cada equipamento possui **um contrato OneCare principal por vez**. O número do contrato e as datas ficam diretamente no cadastro do equipamento.
+
+O cadastro e a conferência dos dados serão manuais. A V1 também deverá permitir a importação de equipamentos por planilha Excel (`.xlsx`). Não haverá integração automática com a Zebra nesta versão.
+
+O campo opcional `data_ultima_conferencia` informa quando alguém conferiu os dados do contrato na planilha, no portal ou em outra fonte original. Ele não altera o status do contrato e serve apenas para indicar quão recente é a informação.
+
+### Histórico simples
+
+Quando o número ou as datas do contrato forem alterados, o backend deverá copiar automaticamente os dados anteriores para uma tabela de histórico antes de salvar a alteração. O usuário continuará vendo apenas o contrato atual na tela principal, mas poderá consultar os contratos anteriores na visualização do equipamento.
+
+Não será necessário criar um CRUD separado e completo de contratos na V1.
+
+## 7. Status do contrato
+
+O status deve ser calculado pelo backend com base na **data atual do servidor** e na data de término do contrato.
+
+Todas as datas de negócio devem considerar o fuso horário `America/Fortaleza`. Datas de cobertura representam dias civis, sem influência do horário UTC.
+
+A regra oficial é:
+
+```text
+Se data_fim < data_atual:
+    VENCIDO
+
+Se data_fim >= data_atual
+e data_fim <= data_atual + 3 meses corridos:
+    VENCENDO
+
+Se data_fim > data_atual + 3 meses corridos:
+    ATIVO
+```
+
+### Definição de 3 meses
+
+“3 meses” significa **3 meses corridos no calendário**, e não uma conversão fixa de 90 dias.
+
+Exemplo:
+
+```text
+Data atual: 10/09/2026
+Limite de 3 meses: 10/12/2026
+```
+
+O sistema deve utilizar operações de data apropriadas para respeitar a duração real dos meses.
+
+### Dia do vencimento
+
+No próprio dia da data de término, o contrato ainda é considerado `VENCENDO`. A partir do dia seguinte, passa a ser `VENCIDO`. O horário não deve alterar essa regra.
+
+### Fonte oficial
+
+O backend é a fonte oficial do status. O frontend apenas apresenta o status recebido e pode atualizar o contador visualmente.
+
+## 8. Contador de vencimento
+
+O sistema deve mostrar:
+- Data de término do OneCare.
+- Quantidade de dias restantes.
+- Informação amigável sobre o tempo restante.
+
+Exemplos:
+
+```text
+182 dias restantes
+5 meses restantes
+Vencido há 12 dias
+```
+
+A forma de exibição pode ser melhorada conforme a interface evoluir.
+
+### Regra importante
+
+O contador NÃO deve ser armazenado no banco de dados.
+
+Deve ser calculado a partir de:
+
+```text
+data_fim_onecare - data_atual
+```
+
+## 9. Rotina automática de verificação
+
+O backend deverá possuir uma rotina automática para verificar contratos próximos do vencimento.
+
+Essa rotina será responsável por:
+
+1. consultar os equipamentos;
+2. calcular a situação de cada contrato;
+3. identificar os que entraram na janela de 3 meses;
+4. criar as notificações necessárias;
+5. evitar duplicações.
+
+Equipamentos arquivados não devem ser processados pela rotina.
+
+A rotina deverá ser executada periodicamente pelo servidor, pelo menos uma vez por dia. A implementação pode utilizar um scheduler/cron apropriado para Node.js.
+
+## 10. Alerta de 3 meses
+
+O sistema deverá identificar contratos próximos do vencimento.
+
+Quando o contrato entrar na janela de aproximadamente 3 meses restantes, o sistema deverá gerar uma notificação.
+
+Essa notificação não deve ser criada repetidamente todos os dias.
+
+Deve existir mecanismo para evitar duplicação.
+
+A chave do evento deve incluir a data de término do contrato. Exemplo:
+
+```text
+ONECARE_3_MESES:2026-12-15
+```
+
+Assim, uma renovação poderá gerar uma nova notificação sem duplicar alertas do mesmo vencimento.
+
+Exemplo:
+
+```text
+Equipamento SN123456 está com o contrato OneCare próximo do vencimento.
+Vencimento: 15/12/2026.
+```
+
+## 11. Notificações
+
+Criar uma tabela de notificações relacionada aos equipamentos.
+
+Estrutura mínima:
+
+```text
+id
+equipamento_id
+tipo
+mensagem
+lida
+created_at
+```
+
+Tipos poderão incluir futuramente:
+
+```text
+ONECARE_3_MESES
+ONECARE_30_DIAS
+ONECARE_VENCIDO
+```
+
+Inicialmente, implementar pelo menos:
+
+```text
+ONECARE_3_MESES
+```
+
+### Comportamento
+- Notificações podem ser marcadas como lidas.
+- Notificações não devem ser duplicadas para o mesmo evento.
+- O sistema deve possuir endpoint para listar notificações.
+- O sistema deve possuir endpoint para marcar notificação como lida.
+
+## 12. Dashboard
+
+Criar uma página inicial com visão geral dos contratos.
+
+O dashboard deve apresentar pelo menos:
+
+### Total de equipamentos
+Quantidade total cadastrada.
+
+### OneCare ativos
+Quantidade de contratos ativos.
+
+### OneCare vencendo
+Quantidade de contratos com até 3 meses restantes.
+
+### OneCare vencido
+Quantidade de contratos vencidos.
+
+### Vencimento em até 30 dias
+Quantidade de contratos que vencem nos próximos 30 dias.
+
+Também pode existir uma área com:
+- notificações recentes;
+- próximos vencimentos;
+- últimos equipamentos cadastrados.
+
+Por padrão, os indicadores devem considerar apenas equipamentos não arquivados.
+
+## 13. Tela de equipamentos
+
+Criar uma tela de listagem dos equipamentos.
+
+Além da listagem principal, criar uma visualização ou filtro específico chamado `Vencidos`, contendo os equipamentos cujo OneCare já terminou.
+
+A tabela deve permitir visualizar, no mínimo:
+- Número de série
+- Part Number
+- Cliente
+- Patrimônio
+- Contrato OneCare
+- Data de início
+- Data de término
+- Dias restantes
+- Status
+- Ações
+
+As ações devem incluir:
+
+```text
+Visualizar
+Editar
+Excluir
+```
+
+## 14. Pesquisa, filtros e paginação
+
+A tela de equipamentos deve permitir pesquisa.
+
+Inicialmente, permitir busca por:
+- Número de série
+- Part Number
+- Cliente
+- Patrimônio
+- Contrato OneCare
+
+Também deve ser possível filtrar por status:
+
+```text
+Todos
+Ativos
+Vencendo
+Vencidos
+```
+
+A API deve oferecer paginação e ordenação. Formato inicial:
+
+```http
+GET /equipamentos?page=1&limit=20&search=SN123&status=VENCENDO&orderBy=dataFimOnecare&order=asc
+```
+
+Regras:
+- `page` inicia em `1`;
+- `limit` padrão igual a `20` e máximo igual a `100`;
+- a ordenação padrão deve mostrar primeiro os vencimentos mais próximos;
+- registros arquivados ficam fora da listagem principal;
+- a resposta deve incluir `items`, `page`, `limit`, `total` e `totalPages`.
+
+Filtros adicionais podem ser implementados futuramente.
+
+## 15. Cadastro e edição
+
+Criar formulário para cadastrar equipamento.
+
+Campos:
+
+```text
+Número de Série
+Part Number
+Cliente
+Patrimônio
+Contrato OneCare
+Data de início
+Data de término
+```
+
+O mesmo formulário pode ser reutilizado para edição.
+
+Antes de salvar:
+- Validar campos obrigatórios.
+- Validar formato de dados.
+- Validar datas.
+- Validar número de série duplicado.
+- Converter o número de série para maiúsculas antes da validação e persistência.
+- Rejeitar número de série com espaços ou caracteres diferentes de `A-Z` e `0-9`.
+
+## 16. Importação por Excel
+
+A V1 deverá permitir a importação de arquivos `.xlsx`.
+
+Colunas esperadas:
+
+```text
+serial_number
+part_number
+cliente
+patrimonio
+contrato_onecare
+data_inicio_onecare
+data_fim_onecare
+data_ultima_conferencia
+```
+
+`patrimonio` e `data_ultima_conferencia` são opcionais. As demais colunas são obrigatórias.
+
+Fluxo esperado:
+1. selecionar a planilha;
+2. validar cabeçalhos e conteúdo;
+3. apresentar uma prévia com linhas válidas e inválidas;
+4. solicitar confirmação;
+5. importar apenas as linhas válidas;
+6. apresentar um resumo com quantidades importadas, ignoradas e rejeitadas, incluindo o motivo de cada erro.
+
+Na V1, seriais já cadastrados devem ser ignorados e informados no relatório, sem sobrescrever registros existentes.
+
+## 17. API
+
+Criar uma API REST.
+
+### Equipamentos
+
+Listar:
+```http
+GET /equipamentos
+```
+
+Buscar por ID:
+```http
+GET /equipamentos/:id
+```
+
+Criar:
+```http
+POST /equipamentos
+```
+
+Atualizar:
+```http
+PATCH /equipamentos/:id
+```
+
+Arquivar:
+```http
+DELETE /equipamentos/:id
+```
+
+Restaurar equipamento arquivado:
+```http
+PATCH /equipamentos/:id/restaurar
+```
+
+Consultar histórico de contratos:
+```http
+GET /equipamentos/:id/historico-contratos
+```
+
+Importar planilha:
+```http
+POST /equipamentos/importacao
+```
+
+## 18. API de notificações
+
+Listar notificações:
+```http
+GET /notificacoes
+```
+
+Marcar como lida:
+```http
+PATCH /notificacoes/:id/lida
+```
+
+## 19. API do dashboard
+
+Criar endpoint específico para informações resumidas:
+
+```http
+GET /dashboard
+```
+
+Exemplo:
+
+```json
+{
+  "total": 100,
+  "ativos": 70,
+  "vencendo": 15,
+  "vencidos": 10,
+  "venceEm30Dias": 5
+}
+```
+
+A estrutura final pode ser adaptada conforme as necessidades reais do frontend.
+
+## 20. Banco de dados
+
+Banco:
+
+```text
+MySQL
+```
+
+Tabela principal:
+
+```text
+equipamentos
+```
+
+Tabela de notificações:
+
+```text
+notificacoes
+```
+
+Tabela de histórico simples:
+
+```text
+historico_contratos
+```
+
+### Equipamentos
+
+Estrutura mínima:
+
+```sql
+CREATE TABLE equipamentos (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    serial_number VARCHAR(100) NOT NULL UNIQUE,
+    part_number VARCHAR(100) NOT NULL,
+    cliente VARCHAR(255) NOT NULL,
+    patrimonio VARCHAR(100),
+    contrato_onecare VARCHAR(100),
+    data_inicio_onecare DATE NOT NULL,
+    data_fim_onecare DATE NOT NULL,
+    data_ultima_conferencia DATE,
+    arquivado BOOLEAN NOT NULL DEFAULT FALSE,
+    arquivado_em DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+```
+
+### Histórico de contratos
+
+```sql
+CREATE TABLE historico_contratos (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    equipamento_id INT NOT NULL,
+    contrato_onecare VARCHAR(100),
+    data_inicio_onecare DATE NOT NULL,
+    data_fim_onecare DATE NOT NULL,
+    substituido_em DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (equipamento_id)
+        REFERENCES equipamentos(id)
+        ON DELETE CASCADE
+);
+```
+
+### Notificações
+
+Estrutura mínima:
+
+```sql
+CREATE TABLE notificacoes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    equipamento_id INT NOT NULL,
+    tipo VARCHAR(50) NOT NULL,
+    mensagem TEXT NOT NULL,
+    lida BOOLEAN DEFAULT FALSE,
+    evento_chave VARCHAR(255) NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (equipamento_id)
+        REFERENCES equipamentos(id)
+        ON DELETE CASCADE,
+
+    UNIQUE KEY uq_notificacao_evento (equipamento_id, tipo, evento_chave)
+);
+```
+
+O banco deve ser gerenciado pelo Prisma. As datas do contrato devem ser armazenadas como `DATE` no MySQL.
+
+Alterações estruturais devem ser feitas através de migrations.
+
+## 21. Prisma
+
+Modelo inicial esperado:
+
+```prisma
+model Equipamento {
+  id                Int      @id @default(autoincrement())
+  serialNumber      String   @unique
+  partNumber        String
+  cliente           String
+  patrimonio        String?
+  contratoOnecare   String?
+  dataInicioOnecare DateTime @db.Date
+  dataFimOnecare    DateTime @db.Date
+  dataUltimaConferencia DateTime? @db.Date
+  arquivado         Boolean  @default(false)
+  arquivadoEm       DateTime?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  notificacoes      Notificacao[]
+  historicoContratos HistoricoContrato[]
+}
+
+model HistoricoContrato {
+  id                Int      @id @default(autoincrement())
+  equipamentoId     Int
+  contratoOnecare   String?
+  dataInicioOnecare DateTime @db.Date
+  dataFimOnecare    DateTime @db.Date
+  substituidoEm     DateTime @default(now())
+
+  equipamento       Equipamento @relation(fields: [equipamentoId], references: [id], onDelete: Cascade)
+}
+
+model Notificacao {
+  id             Int      @id @default(autoincrement())
+  equipamentoId  Int
+  tipo           String
+  mensagem       String
+  lida           Boolean  @default(false)
+  eventoChave    String
+  createdAt      DateTime @default(now())
+
+  equipamento    Equipamento @relation(
+    fields: [equipamentoId],
+    references: [id],
+    onDelete: Cascade
+  )
+
+  @@unique([equipamentoId, tipo, eventoChave])
+}
+```
+
+Esse modelo pode ser ajustado conforme a implementação real, desde que o agente explique alterações relevantes.
+
+## 22. Regras de negócio
+
+### Número de série
+Não pode existir mais de um equipamento com o mesmo serial.
+
+O backend deverá aplicar `trim`, converter o valor para maiúsculas e validar a expressão regular:
+
+```text
+^[A-Z0-9]+$
+```
+
+### Datas
+
+```text
+data_inicio_onecare <= data_fim_onecare
+```
+
+### Status
+O status deve ser calculado automaticamente.
+
+### Timer
+Nunca armazenar timer no banco.
+
+### Notificações
+Evitar notificações duplicadas.
+
+### Backend
+O backend é a fonte oficial das regras de negócio.
+
+### Frontend
+O frontend é responsável pela apresentação e interação com o usuário.
+
+## 23. Regras para exclusão
+
+A ação de exclusão da interface deve arquivar o equipamento e exigir confirmação explícita no frontend.
+
+Equipamentos arquivados:
+- não aparecem nas listagens e indicadores principais;
+- não geram notificações;
+- podem ser consultados em uma área de arquivados;
+- podem ser restaurados.
+
+Não implementar exclusão física pela interface na V1. O `ON DELETE CASCADE` permanece apenas para uma eventual operação administrativa futura.
+
+## 24. Tratamento de erros
+
+A API deve retornar respostas HTTP coerentes.
+
+Exemplos:
+
+```text
+200 OK
+201 Created
+400 Bad Request
+404 Not Found
+409 Conflict
+413 Payload Too Large
+415 Unsupported Media Type
+422 Unprocessable Entity
+500 Internal Server Error
+```
+
+Exemplo de erro:
+
+```json
+{
+  "error": "Equipamento com esse número de série já existe."
+}
+```
+
+Evitar expor informações sensíveis ou detalhes internos desnecessários.
+
+Formato padrão sugerido:
+
+```json
+{
+  "error": "SERIAL_DUPLICADO",
+  "message": "Equipamento com esse número de série já existe.",
+  "details": []
+}
+```
+
+Erros mínimos a tratar:
+- campos obrigatórios ausentes;
+- serial inválido ou duplicado;
+- intervalo de datas inválido;
+- equipamento ou notificação não encontrado;
+- parâmetros de paginação inválidos;
+- arquivo ausente, muito grande ou em formato diferente de `.xlsx`;
+- cabeçalhos ou linhas inválidas na importação;
+- indisponibilidade do banco de dados.
+
+## 25. Configuração
+
+Informações sensíveis não devem ficar diretamente no código.
+
+Utilizar variáveis de ambiente.
+
+Exemplo:
+
+```env
+DATABASE_URL="mysql://usuario:senha@localhost:3306/onecare"
+PORT=3000
+TZ=America/Fortaleza
+```
+
+O arquivo `.env` não deve ser versionado no Git.
+
+Criar `.env.example` para documentar as variáveis necessárias.
+
+## 26. Segurança
+
+Mesmo sendo uma primeira versão simples, seguir boas práticas básicas:
+
+- Validar dados no backend.
+- Não confiar apenas na validação do frontend.
+- Utilizar ORM/queries parametrizadas para evitar SQL Injection.
+- Não armazenar senhas ou segredos no código.
+- Não versionar `.env`.
+- Tratar erros de maneira segura.
+- Separar responsabilidades entre rotas, controllers e services.
+- Preparar o projeto para autenticação futura.
+- Limitar o tamanho dos arquivos de importação.
+- Validar extensão, tipo e conteúdo das planilhas.
+
+Não implementar autenticação complexa sem necessidade nesta primeira versão.
+
+## 27. Interface
+
+A interface deve ser limpa e objetiva.
+
+Prioridades:
+1. Facilidade de visualização.
+2. Pesquisa rápida.
+3. Identificação clara de contratos vencendo.
+4. Identificação clara de contratos vencidos.
+5. Cadastro simples.
+
+Sugestão de navegação:
+
+```text
+Dashboard
+Equipamentos
+Vencidos
+Notificações
+Arquivados
+```
+
+A interface deve ser responsiva.
+
+## 28. Visualização de status
+
+Utilizar indicação visual para os estados:
+
+```text
+ATIVO
+VENCENDO
+VENCIDO
+```
+
+A implementação visual exata fica a critério do frontend, mas deve ser intuitiva.
+
+## 29. Arquitetura
+
+O projeto deve seguir separação de responsabilidades.
+
+Backend:
+
+```text
+Routes
+   ↓
+Controllers
+   ↓
+Services
+   ↓
+Prisma
+   ↓
+MySQL
+```
+
+Frontend:
+
+```text
+Pages
+   ↓
+Components
+   ↓
+Services/API
+   ↓
+Backend
+```
+
+Evitar concentrar toda a lógica em um único arquivo.
+
+## 30. Testes
+
+Implementar testes progressivamente.
+
+Priorizar inicialmente:
+- criação de equipamento;
+- tentativa de serial duplicado;
+- validação de datas;
+- cálculo de status;
+- cálculo de dias restantes;
+- criação de notificação;
+- prevenção de notificação duplicada.
+- normalização e validação do serial;
+- paginação, pesquisa, filtros e ordenação;
+- importação de planilha válida e inválida;
+- arquivamento e restauração;
+- criação do histórico antes da alteração do contrato;
+- cálculos de data no fuso `America/Fortaleza`.
+
+Testes podem ser ampliados conforme o projeto evoluir.
+
+## 31. Git
+
+O projeto deve utilizar Git desde o início.
+
+Realizar commits pequenos e objetivos.
+
+Exemplos:
+
+```text
+chore: inicializa projeto
+feat: cria modelo de equipamentos
+feat: implementa cadastro de equipamentos
+feat: adiciona dashboard
+feat: adiciona notificações onecare
+fix: corrige cálculo de vencimento
+```
+
+Evitar commits gigantes com diversas funcionalidades não relacionadas.
+
+## 32. Documentação
+
+O projeto deve possuir documentação suficiente para outra pessoa conseguir executar o sistema.
+
+O README deve explicar:
+- requisitos;
+- instalação;
+- configuração do `.env`;
+- criação do banco;
+- execução das migrations;
+- execução do backend;
+- execução do frontend;
+- execução dos testes.
+
+## 33. Desenvolvimento por etapas
+
+Não criar o sistema inteiro de uma única vez.
+
+Seguir preferencialmente esta ordem:
+
+### Etapa 1 — Estrutura
+Criar:
+- backend;
+- frontend;
+- Git;
+- arquivos base;
+- configuração inicial.
+
+### Etapa 2 — Banco
+Criar:
+- Prisma;
+- conexão MySQL;
+- schema;
+- migrations.
+
+### Etapa 3 — Equipamentos
+Criar:
+- CRUD;
+- validações;
+- pesquisa;
+- paginação e ordenação;
+- arquivamento e restauração;
+- importação por Excel.
+
+### Etapa 4 — Status
+Implementar:
+- ativo;
+- vencendo;
+- vencido;
+- dias restantes;
+- tela de vencidos;
+- histórico simples de contratos.
+
+### Etapa 5 — Dashboard
+Implementar:
+- indicadores;
+- próximos vencimentos.
+
+### Etapa 6 — Notificações
+Implementar:
+- alerta de 3 meses;
+- armazenamento;
+- listagem;
+- marcar como lida.
+
+### Etapa 7 — Refinamento
+Melhorar:
+- interface;
+- responsividade;
+- tratamento de erros;
+- testes;
+- documentação.
+
+## 34. Regras para o agente de desenvolvimento
+
+O agente deve seguir estas regras:
+
+1. Ler este documento antes de iniciar alterações importantes.
+2. Não alterar o banco sem migration.
+3. Não armazenar o timer no banco.
+4. O backend deve ser a fonte oficial do status.
+5. Não remover funcionalidades existentes sem autorização.
+6. Não adicionar funcionalidades grandes fora do escopo sem autorização.
+7. Fazer alterações pequenas e organizadas.
+8. Explicar alterações importantes.
+9. Executar testes após alterações relevantes.
+10. Verificar erros de lint/build quando aplicável.
+11. Evitar duplicação de código.
+12. Manter o projeto simples antes de adicionar complexidade.
+13. Não instalar dependências desnecessárias.
+14. Manter `.env` fora do Git.
+15. Criar ou atualizar documentação quando uma alteração modificar o funcionamento do sistema.
+16. Antes de executar comandos potencialmente destrutivos, solicitar confirmação.
+17. Não apagar dados reais do banco durante desenvolvimento sem autorização explícita.
+
+## 35. Comportamento esperado do Codex
+
+Ao iniciar o projeto, o agente deve:
+
+1. Ler `documentacao_sistema_onecare.md`.
+2. Ler `AGENTS.md`, quando existir.
+3. Verificar a estrutura atual do projeto.
+4. Identificar o que já está implementado.
+5. Não reescrever partes existentes desnecessariamente.
+6. Propor a próxima etapa.
+7. Executar a etapa aprovada.
+8. Testar a implementação.
+9. Relatar o que foi alterado.
+10. Informar quaisquer problemas encontrados.
+
+## 36. Primeira instrução para o agente
+
+Ao abrir o projeto pela primeira vez, utilizar uma instrução semelhante à seguinte:
+
+> Leia completamente o arquivo `documentacao_sistema_onecare.md` e qualquer arquivo `AGENTS.md` existente.
+>
+> Não implemente o sistema inteiro neste momento.
+>
+> Primeiro analise a documentação e o estado atual do projeto.
+>
+> Explique:
+>
+> 1. a arquitetura recomendada;
+> 2. a estrutura de pastas;
+> 3. as dependências necessárias;
+> 4. a estratégia de banco de dados e migrations;
+> 5. possíveis problemas ou inconsistências na especificação;
+> 6. a ordem recomendada de implementação.
+>
+> Não faça alterações ainda.
+>
+> Depois da análise, aguarde a minha autorização para iniciar a primeira etapa.
+
+## 37. Funcionalidades futuras
+
+Estas funcionalidades podem ser consideradas posteriormente, mas não devem ser implementadas na primeira versão sem autorização:
+
+- autenticação de usuários;
+- níveis de acesso;
+- múltiplos usuários;
+- histórico completo de alterações;
+- exportação para Excel;
+- exportação para PDF;
+- envio de e-mail;
+- envio de notificações via WhatsApp;
+- integração com OneCare/API externa;
+- anexos de documentos;
+- múltiplos contratos por equipamento;
+- relatórios avançados;
+- filtros avançados;
+- auditoria;
+- backup automático;
+- Docker;
+- deploy em servidor;
+- integração CI/CD.
+
+## 38. Critérios de qualidade
+
+Uma funcionalidade somente deve ser considerada concluída quando:
+
+- estiver implementada;
+- estiver integrada ao restante do sistema;
+- estiver validada;
+- não quebrar funcionalidades existentes;
+- possuir tratamento básico de erros;
+- tiver sido testada;
+- estiver documentada quando necessário.
+
+## 39. Princípio geral do projeto
+
+Priorizar:
+
+```text
+Simplicidade
++
+Organização
++
+Confiabilidade
++
+Facilidade de manutenção
+```
+
+Evitar criar uma arquitetura excessivamente complexa para uma primeira versão.
+
+O sistema deve ser construído de forma incremental, permitindo que novas funcionalidades sejam adicionadas posteriormente sem necessidade de reescrever toda a aplicação.
