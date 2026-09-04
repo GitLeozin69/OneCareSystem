@@ -21,7 +21,7 @@ O sistema deverá permitir:
 7. Exibir quanto tempo falta para o vencimento.
 8. Identificar contratos vencidos.
 9. Identificar contratos próximos do vencimento.
-10. Gerar notificações quando faltarem aproximadamente 3 meses para o vencimento.
+10. Gerar notificações quando faltarem 3 meses corridos ou menos para o vencimento.
 11. Exibir indicadores gerais em um dashboard.
 12. Manter informações de criação e alteração dos registros.
 13. Possibilitar futuras integrações e expansão do sistema.
@@ -49,6 +49,8 @@ Não utilizar frameworks CSS como Bootstrap ou Material UI na V1, salvo autoriza
 
 ### Desenvolvimento
 O projeto deve ser compatível com Windows 11 e funcionar adequadamente pelo terminal integrado do VS Code.
+
+Devem ser utilizadas versões estáveis e mutuamente compatíveis do Node.js, Fastify, Prisma, MySQL, React, Vite e Tailwind CSS. A escolha exata das versões será feita durante a configuração inicial, priorizando execução local e portabilidade futura para serviços de hospedagem como Railway ou equivalente.
 
 ## 4. Estrutura esperada do projeto
 
@@ -112,6 +114,7 @@ Cada equipamento deverá possuir, no mínimo:
 ### Regras
 - O número de série deve ser único.
 - O número de série deve ser normalizado para maiúsculas e aceitar somente letras de `A` a `Z` e números de `0` a `9`, sem espaços ou caracteres especiais.
+- O número do contrato OneCare é opcional tanto no cadastro manual quanto na importação.
 - A data de término não pode ser anterior à data de início.
 - Campos obrigatórios devem ser validados no backend.
 - O frontend também deve apresentar validações para melhorar a experiência do usuário.
@@ -131,6 +134,8 @@ O campo opcional `data_ultima_conferencia` informa quando alguém conferiu os da
 ### Histórico simples
 
 Quando o número ou as datas do contrato forem alterados, o backend deverá copiar automaticamente os dados anteriores para uma tabela de histórico antes de salvar a alteração. O usuário continuará vendo apenas o contrato atual na tela principal, mas poderá consultar os contratos anteriores na visualização do equipamento.
+
+O histórico somente deve ser criado quando houver uma alteração real em `contrato_onecare`, `data_inicio_onecare` ou `data_fim_onecare`. Alterações em outros campos, ou o envio dos mesmos valores já persistidos, não devem criar entradas de histórico.
 
 Não será necessário criar um CRUD separado e completo de contratos na V1.
 
@@ -158,6 +163,8 @@ Se data_fim > data_atual + 3 meses corridos:
 
 “3 meses” significa **3 meses corridos no calendário**, e não uma conversão fixa de 90 dias.
 
+Quando a data atual estiver no final de um mês e o mês resultante não possuir o mesmo número de dia, o limite deve ser ajustado para o último dia válido do mês de destino, sem transbordar para o mês seguinte.
+
 Exemplo:
 
 ```text
@@ -170,6 +177,8 @@ O sistema deve utilizar operações de data apropriadas para respeitar a duraç�
 ### Dia do vencimento
 
 No próprio dia da data de término, o contrato ainda é considerado `VENCENDO`. A partir do dia seguinte, passa a ser `VENCIDO`. O horário não deve alterar essa regra.
+
+No dia do vencimento, o contador deve apresentar `0 dias restantes`.
 
 ### Fonte oficial
 
@@ -202,6 +211,8 @@ Deve ser calculado a partir de:
 data_fim_onecare - data_atual
 ```
 
+Na interface e nas planilhas, as datas devem ser apresentadas no formato `DD/MM/AAAA`. Na comunicação interna da API e na persistência, devem utilizar o formato não ambíguo `AAAA-MM-DD`, mantendo o tipo `DATE` no MySQL. Conversões não devem deslocar o dia por influência de UTC.
+
 ## 9. Rotina automática de verificação
 
 O backend deverá possuir uma rotina automática para verificar contratos próximos do vencimento.
@@ -218,11 +229,17 @@ Equipamentos arquivados não devem ser processados pela rotina.
 
 A rotina deverá ser executada periodicamente pelo servidor, pelo menos uma vez por dia. A implementação pode utilizar um scheduler/cron apropriado para Node.js.
 
+Na V1, a rotina deverá executar também na inicialização do backend, para que contratos que já estejam dentro da janela de três meses sejam identificados imediatamente. A execução diária será feita pelo próprio backend, considerando inicialmente uma única instância do servidor.
+
+A restrição única das notificações no banco continuará sendo obrigatória. Ela impedirá duplicações caso a rotina seja executada mais de uma vez. Se a aplicação for futuramente escalada para múltiplas instâncias, o agendamento deverá ser movido para um processo exclusivo ou para um serviço externo de tarefas agendadas.
+
 ## 10. Alerta de 3 meses
 
 O sistema deverá identificar contratos próximos do vencimento.
 
-Quando o contrato entrar na janela de aproximadamente 3 meses restantes, o sistema deverá gerar uma notificação.
+Quando o contrato entrar na janela de 3 meses corridos restantes, o sistema deverá gerar uma notificação.
+
+Na primeira execução da rotina, também devem ser notificados todos os equipamentos não arquivados cujo contrato ainda não venceu e termine entre a data atual e o limite de três meses corridos, inclusive. Contratos já vencidos não devem gerar uma notificação do tipo `ONECARE_3_MESES`.
 
 Essa notificação não deve ser criada repetidamente todos os dias.
 
@@ -361,7 +378,7 @@ GET /equipamentos?page=1&limit=20&search=SN123&status=VENCENDO&orderBy=dataFimOn
 Regras:
 - `page` inicia em `1`;
 - `limit` padrão igual a `20` e máximo igual a `100`;
-- a ordenação padrão deve mostrar primeiro os vencimentos mais próximos;
+- a ordenação padrão da API será por `dataFimOnecare` em ordem crescente (`asc`);
 - registros arquivados ficam fora da listagem principal;
 - a resposta deve incluir `items`, `page`, `limit`, `total` e `totalPages`.
 
@@ -410,7 +427,9 @@ data_fim_onecare
 data_ultima_conferencia
 ```
 
-`patrimonio` e `data_ultima_conferencia` são opcionais. As demais colunas são obrigatórias.
+`patrimonio`, `contrato_onecare` e `data_ultima_conferencia` são opcionais. As demais colunas são obrigatórias.
+
+As datas da planilha devem estar no formato `DD/MM/AAAA`, sempre com quatro dígitos no ano.
 
 Fluxo esperado:
 1. selecionar a planilha;
@@ -421,6 +440,19 @@ Fluxo esperado:
 6. apresentar um resumo com quantidades importadas, ignoradas e rejeitadas, incluindo o motivo de cada erro.
 
 Na V1, seriais já cadastrados devem ser ignorados e informados no relatório, sem sobrescrever registros existentes.
+
+Seriais repetidos dentro da própria planilha também não devem gerar mais de um equipamento. Após normalização, a primeira ocorrência válida poderá ser importada e as ocorrências seguintes deverão ser ignoradas e identificadas no relatório como duplicadas.
+
+A importação será dividida em dois endpoints:
+
+```http
+POST /equipamentos/importacao/validar
+POST /equipamentos/importacao/confirmar
+```
+
+O primeiro endpoint recebe a planilha e retorna a prévia de validação. Após a confirmação do usuário, o frontend envia a mesma planilha ao segundo endpoint. O backend deve repetir a validação antes de persistir os registros, sem depender do armazenamento temporário do arquivo no servidor.
+
+Por padrão, cada planilha poderá possuir no máximo `10 MB` e `10.000` linhas. Esses limites devem ser configuráveis por variáveis de ambiente. O backend deve rejeitar arquivos que ultrapassem qualquer um dos limites.
 
 ## 17. API
 
@@ -458,15 +490,27 @@ Restaurar equipamento arquivado:
 PATCH /equipamentos/:id/restaurar
 ```
 
+Listar equipamentos arquivados:
+```http
+GET /equipamentos/arquivados
+```
+
 Consultar histórico de contratos:
 ```http
 GET /equipamentos/:id/historico-contratos
 ```
 
-Importar planilha:
+Validar planilha e gerar prévia:
 ```http
-POST /equipamentos/importacao
+POST /equipamentos/importacao/validar
 ```
+
+Confirmar importação:
+```http
+POST /equipamentos/importacao/confirmar
+```
+
+Os corpos e respostas JSON da API devem utilizar propriedades em `camelCase`. Os nomes em `snake_case` permanecem restritos aos cabeçalhos da planilha e aos nomes físicos definidos no banco, quando aplicável.
 
 ## 18. API de notificações
 
@@ -688,7 +732,7 @@ A ação de exclusão da interface deve arquivar o equipamento e exigir confirma
 Equipamentos arquivados:
 - não aparecem nas listagens e indicadores principais;
 - não geram notificações;
-- podem ser consultados em uma área de arquivados;
+- podem ser consultados em uma área de arquivados por meio de `GET /equipamentos/arquivados`;
 - podem ser restaurados.
 
 Não implementar exclusão física pela interface na V1. O `ON DELETE CASCADE` permanece apenas para uma eventual operação administrativa futura.
@@ -753,6 +797,8 @@ Exemplo:
 DATABASE_URL="mysql://usuario:senha@localhost:3306/onecare"
 PORT=3000
 TZ=America/Fortaleza
+IMPORT_MAX_FILE_SIZE_MB=10
+IMPORT_MAX_ROWS=10000
 ```
 
 O arquivo `.env` não deve ser versionado no Git.
@@ -773,8 +819,13 @@ Mesmo sendo uma primeira versão simples, seguir boas práticas básicas:
 - Preparar o projeto para autenticação futura.
 - Limitar o tamanho dos arquivos de importação.
 - Validar extensão, tipo e conteúdo das planilhas.
+- Configurar CORS explicitamente para as origens permitidas.
+- Aplicar cabeçalhos HTTP de segurança.
+- Aplicar limitação de requisições, especialmente em endpoints de escrita e importação.
 
 Não implementar autenticação complexa sem necessidade nesta primeira versão.
+
+A V1 será executada sem autenticação de usuários. As validações, o CORS, os cabeçalhos de segurança e a limitação de requisições reduzem riscos técnicos, mas não substituem controle de acesso. Enquanto não houver autenticação, uma implantação web não deve expor publicamente os endpoints de escrita sem uma proteção de acesso fornecida pela plataforma ou pela rede. A autenticação da aplicação permanece como evolução futura.
 
 ## 27. Interface
 

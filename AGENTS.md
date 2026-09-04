@@ -16,3 +16,13 @@ Antes de implementar qualquer funcionalidade, leia:
 - Não altere arquivos sem relação com a tarefa atual.
 - Mantenha `.env` fora do Git.
 - Explique resumidamente o que foi alterado.
+
+## Git e checkpoints
+
+- Crie um commit local ao concluir cada etapa ou funcionalidade relevante.
+- Somente crie o commit se os testes, o lint e o build aplicáveis passarem.
+- Revise `git diff` e `git status` antes do commit.
+- Não versione `.env`, `node_modules`, `dist`, logs ou arquivos sensíveis.
+- Use Conventional Commits.
+- Não use `--no-verify` ou `--amend`.
+- Nunca execute `git push` sem autorização explícita do usuário.
