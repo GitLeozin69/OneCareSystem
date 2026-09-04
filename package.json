@@ -7,6 +7,10 @@
     "dev:frontend": "npm --prefix frontend run dev",
     "lint": "npm --prefix backend run lint && npm --prefix frontend run lint",
     "test": "npm --prefix backend run test",
-    "build": "npm --prefix backend run build && npm --prefix frontend run build"
+    "build": "npm --prefix backend run build && npm --prefix frontend run build",
+    "db:validate": "npm --prefix backend run db:validate",
+    "db:generate": "npm --prefix backend run db:generate",
+    "db:migrate:deploy": "npm --prefix backend run db:migrate:deploy",
+    "db:migrate:status": "npm --prefix backend run db:migrate:status"
   }
 }

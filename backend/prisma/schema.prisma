@@ -1,0 +1,55 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+model Equipamento {
+  id                    Int                 @id @default(autoincrement())
+  serialNumber          String              @unique(map: "uq_equipamentos_serial_number") @map("serial_number") @db.VarChar(100)
+  partNumber            String              @map("part_number") @db.VarChar(100)
+  cliente               String              @db.VarChar(255)
+  patrimonio            String?             @db.VarChar(100)
+  contratoOnecare       String?             @map("contrato_onecare") @db.VarChar(100)
+  dataInicioOnecare     DateTime            @map("data_inicio_onecare") @db.Date
+  dataFimOnecare        DateTime            @map("data_fim_onecare") @db.Date
+  dataUltimaConferencia DateTime?           @map("data_ultima_conferencia") @db.Date
+  arquivado             Boolean             @default(false)
+  arquivadoEm           DateTime?           @map("arquivado_em") @db.DateTime(0)
+  createdAt             DateTime            @default(now()) @map("created_at") @db.DateTime(0)
+  updatedAt             DateTime            @updatedAt @map("updated_at") @db.DateTime(0)
+  notificacoes          Notificacao[]
+  historicoContratos    HistoricoContrato[]
+
+  @@index([arquivado, dataFimOnecare], map: "idx_equipamentos_arquivado_data_fim")
+  @@map("equipamentos")
+}
+
+model Notificacao {
+  id            Int         @id @default(autoincrement())
+  equipamentoId Int         @map("equipamento_id")
+  tipo          String      @db.VarChar(50)
+  mensagem      String      @db.Text
+  lida          Boolean     @default(false)
+  eventoChave   String      @map("evento_chave") @db.VarChar(255)
+  createdAt     DateTime    @default(now()) @map("created_at") @db.DateTime(0)
+  equipamento   Equipamento @relation(fields: [equipamentoId], references: [id], onDelete: Cascade, map: "fk_notificacoes_equipamento")
+
+  @@unique([equipamentoId, tipo, eventoChave], map: "uq_notificacao_evento")
+  @@map("notificacoes")
+}
+
+model HistoricoContrato {
+  id                Int         @id @default(autoincrement())
+  equipamentoId     Int         @map("equipamento_id")
+  contratoOnecare   String?     @map("contrato_onecare") @db.VarChar(100)
+  dataInicioOnecare DateTime    @map("data_inicio_onecare") @db.Date
+  dataFimOnecare    DateTime    @map("data_fim_onecare") @db.Date
+  substituidoEm     DateTime    @default(now()) @map("substituido_em") @db.DateTime(0)
+  equipamento       Equipamento @relation(fields: [equipamentoId], references: [id], onDelete: Cascade, map: "fk_historico_contratos_equipamento")
+
+  @@index([equipamentoId], map: "idx_historico_contratos_equipamento")
+  @@map("historico_contratos")
+}

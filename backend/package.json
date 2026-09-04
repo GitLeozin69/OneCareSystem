@@ -11,14 +11,21 @@
     "start": "node --env-file-if-exists=../.env src/server.js",
     "lint": "eslint .",
     "test": "node --test",
-    "build": "node --check src/app.js && node --check src/server.js"
+    "build": "node --check src/app.js && node --check src/server.js && node --check prisma.config.js",
+    "db:validate": "prisma validate",
+    "db:generate": "prisma generate",
+    "db:migrate:deploy": "prisma migrate deploy",
+    "db:migrate:status": "prisma migrate status"
   },
   "dependencies": {
+    "@prisma/client": "^7.10.0",
+    "dotenv": "^17.4.2",
     "fastify": "^5.12.3"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "eslint": "^10.10.0",
-    "globals": "^17.12.0"
+    "globals": "^17.12.0",
+    "prisma": "^7.10.0"
   }
 }
