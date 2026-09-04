@@ -2,7 +2,7 @@
 
 Sistema web para controle de equipamentos vinculados a contratos OneCare.
 
-O projeto está na Etapa 2: estrutura inicial do backend e do frontend, schema Prisma e migration inicial do banco. As regras de negócio ainda não estão implementadas.
+O projeto está na Etapa 3A: estrutura base, banco configurado e API básica de equipamentos. Pesquisa, paginação, importação, status, dashboard, notificações e telas funcionais ainda não estão implementados.
 
 ## Tecnologias
 
@@ -97,6 +97,36 @@ Por padrão:
 - backend: `http://localhost:3000`
 - verificação de saúde: `http://localhost:3000/health`
 - frontend: endereço informado pelo Vite no terminal
+
+## API de equipamentos
+
+Endpoints implementados:
+
+```http
+POST   /equipamentos
+GET    /equipamentos/arquivados
+GET    /equipamentos/:id
+PATCH  /equipamentos/:id
+DELETE /equipamentos/:id
+PATCH  /equipamentos/:id/restaurar
+```
+
+O cadastro utiliza propriedades em `camelCase`:
+
+```json
+{
+  "serialNumber": "SN123456",
+  "partNumber": "PN001",
+  "cliente": "Cliente Exemplo",
+  "patrimonio": "PAT001",
+  "contratoOnecare": "OC001",
+  "dataInicioOnecare": "2026-01-01",
+  "dataFimOnecare": "2026-12-31",
+  "dataUltimaConferencia": "2026-09-04"
+}
+```
+
+As datas da API utilizam `AAAA-MM-DD`. `patrimonio`, `contratoOnecare` e `dataUltimaConferencia` são opcionais. A remoção é lógica e equipamentos arquivados não são retornados por `GET /equipamentos/:id`.
 
 ## Verificações
 
