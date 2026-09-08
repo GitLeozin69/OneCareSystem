@@ -113,6 +113,7 @@ Cada equipamento deverá possuir, no mínimo:
 
 ### Regras
 - O número de série deve ser único.
+- O patrimônio é opcional; quando informado, deve ser único globalmente, inclusive entre equipamentos arquivados. Aplicar `trim` e converter texto vazio ou somente espaços para `null`. Vários equipamentos podem ter patrimônio `null`; não há nova restrição de formato.
 - O número de série deve ser normalizado para maiúsculas e aceitar somente letras de `A` a `Z` e números de `0` a `9`, sem espaços ou caracteres especiais.
 - O número do contrato OneCare é opcional tanto no cadastro manual quanto na importação.
 - A data de término não pode ser anterior à data de início.
@@ -407,6 +408,7 @@ Antes de salvar:
 - Validar formato de dados.
 - Validar datas.
 - Validar número de série duplicado.
+- Validar patrimônio duplicado, incluindo equipamentos arquivados e desconsiderando o próprio equipamento na edição.
 - Converter o número de série para maiúsculas antes da validação e persistência.
 - Rejeitar número de série com espaços ou caracteres diferentes de `A-Z` e `0-9`.
 
@@ -442,6 +444,8 @@ Fluxo esperado:
 Na V1, seriais já cadastrados devem ser ignorados e informados no relatório, sem sobrescrever registros existentes.
 
 Seriais repetidos dentro da própria planilha também não devem gerar mais de um equipamento. Após normalização, a primeira ocorrência válida poderá ser importada e as ocorrências seguintes deverão ser ignoradas e identificadas no relatório como duplicadas.
+
+Na futura implementação da importação, patrimônios informados devem receber `trim` e valores vazios devem ser convertidos para `null`. Linhas com patrimônio já utilizado no sistema (inclusive por equipamento arquivado) ou repetido em outra linha válida da planilha deverão ser rejeitadas e identificadas no relatório, sem sobrescrever registros. Essa regra será implementada na etapa de importação.
 
 A importação será dividida em dois endpoints:
 
@@ -582,7 +586,7 @@ CREATE TABLE equipamentos (
     serial_number VARCHAR(100) NOT NULL UNIQUE,
     part_number VARCHAR(100) NOT NULL,
     cliente VARCHAR(255) NOT NULL,
-    patrimonio VARCHAR(100),
+    patrimonio VARCHAR(100) UNIQUE,
     contrato_onecare VARCHAR(100),
     data_inicio_onecare DATE NOT NULL,
     data_fim_onecare DATE NOT NULL,
@@ -647,7 +651,7 @@ model Equipamento {
   serialNumber      String   @unique
   partNumber        String
   cliente           String
-  patrimonio        String?
+  patrimonio        String?  @unique(map: "uq_equipamentos_patrimonio")
   contratoOnecare   String?
   dataInicioOnecare DateTime @db.Date
   dataFimOnecare    DateTime @db.Date
@@ -710,6 +714,12 @@ O backend deverá aplicar `trim`, converter o valor para maiúsculas e validar a
 data_inicio_onecare <= data_fim_onecare
 ```
 
+### Patrimônio
+
+O patrimônio é opcional e, quando informado, único em todo o sistema. O backend aplica `trim`, preserva o formato informado e converte texto vazio ou apenas espaços para `null`. O índice único permite múltiplos valores `NULL`. O patrimônio continua reservado ao equipamento arquivado e não pode ser reutilizado enquanto pertencer a ele.
+
+Cadastro e edição com patrimônio já utilizado retornam HTTP `409`, código `PATRIMONIO_DUPLICADO` e mensagem `Já existe um equipamento com esse patrimônio.`. Na edição, manter o mesmo patrimônio no próprio equipamento é permitido.
+
 ### Status
 O status deve ser calculado automaticamente.
 
@@ -734,6 +744,7 @@ Equipamentos arquivados:
 - não geram notificações;
 - podem ser consultados em uma área de arquivados por meio de `GET /equipamentos/arquivados`;
 - podem ser restaurados.
+- mantêm seu patrimônio reservado; outro equipamento não pode reutilizá-lo.
 
 Não implementar exclusão física pela interface na V1. O `ON DELETE CASCADE` permanece apenas para uma eventual operação administrativa futura.
 
@@ -778,6 +789,7 @@ Formato padrão sugerido:
 Erros mínimos a tratar:
 - campos obrigatórios ausentes;
 - serial inválido ou duplicado;
+- patrimônio duplicado, inclusive de equipamento arquivado (`409 PATRIMONIO_DUPLICADO`);
 - intervalo de datas inválido;
 - equipamento ou notificação não encontrado;
 - parâmetros de paginação inválidos;
@@ -901,6 +913,7 @@ Implementar testes progressivamente.
 Priorizar inicialmente:
 - criação de equipamento;
 - tentativa de serial duplicado;
+- patrimônio único no cadastro e na edição, reserva em arquivados, múltiplos valores `null` e normalização de valores vazios;
 - validação de datas;
 - cálculo de status;
 - cálculo de dias restantes;

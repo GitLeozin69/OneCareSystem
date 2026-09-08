@@ -26,11 +26,15 @@ test(
   'POST e GET de equipamento funcionam com o MySQL real',
   { skip: databaseTestEnabled ? false : 'requer DATABASE_URL configurada' },
   async () => {
+    const url = new URL(process.env.DATABASE_URL)
+    assert.equal(decodeURIComponent(url.pathname.slice(1)).toLowerCase(), 'zebraonecare')
     const prisma = createPrismaClient()
     const rollback = new Error('ROLLBACK_TEST_TRANSACTION')
     let serialNumber
 
     try {
+      const [database] = await prisma.$queryRawUnsafe('SELECT DATABASE() AS name')
+      assert.equal(database.name.toLowerCase(), 'zebraonecare')
       await prisma.$transaction(async (transaction) => {
         const equipamentoService = createEquipamentoService({
           prisma: transaction,

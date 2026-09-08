@@ -1,5 +1,10 @@
 import { AppError } from '../utils/appError.js'
 import {
+  duplicatePatrimonioError,
+  duplicateSerialError,
+  fromUniqueConstraintError,
+} from '../utils/equipamentoConflict.js'
+import {
   normalizeCreateEquipamento,
   normalizeEquipamentoId,
   normalizeUpdateEquipamento,
@@ -11,18 +16,6 @@ function notFoundError() {
     code: 'EQUIPAMENTO_NAO_ENCONTRADO',
     message: 'Equipamento não encontrado.',
   })
-}
-
-function duplicateSerialError() {
-  return new AppError({
-    statusCode: 409,
-    code: 'SERIAL_DUPLICADO',
-    message: 'Equipamento com esse número de série já existe.',
-  })
-}
-
-function isUniqueConstraintError(error) {
-  return error?.code === 'P2002'
 }
 
 function sameDate(left, right) {
@@ -53,14 +46,19 @@ export function createEquipamentoService({ prisma, clock = () => new Date() }) {
         throw duplicateSerialError()
       }
 
+      if (data.patrimonio) {
+        const duplicatePatrimonio = await prisma.equipamento.findUnique({
+          where: { patrimonio: data.patrimonio },
+          select: { id: true },
+        })
+
+        if (duplicatePatrimonio) throw duplicatePatrimonioError()
+      }
+
       try {
         return await prisma.equipamento.create({ data })
       } catch (error) {
-        if (isUniqueConstraintError(error)) {
-          throw duplicateSerialError()
-        }
-
-        throw error
+        throw fromUniqueConstraintError(error) ?? error
       }
     },
 
@@ -109,6 +107,15 @@ export function createEquipamentoService({ prisma, clock = () => new Date() }) {
             }
           }
 
+          if (changes.patrimonio && changes.patrimonio !== current.patrimonio) {
+            const duplicatePatrimonio = await transaction.equipamento.findFirst({
+              where: { patrimonio: changes.patrimonio, NOT: { id } },
+              select: { id: true },
+            })
+
+            if (duplicatePatrimonio) throw duplicatePatrimonioError()
+          }
+
           if (contractChanged(current, changes)) {
             await transaction.historicoContrato.create({
               data: {
@@ -126,11 +133,7 @@ export function createEquipamentoService({ prisma, clock = () => new Date() }) {
           })
         })
       } catch (error) {
-        if (isUniqueConstraintError(error)) {
-          throw duplicateSerialError()
-        }
-
-        throw error
+        throw fromUniqueConstraintError(error) ?? error
       }
     },
 

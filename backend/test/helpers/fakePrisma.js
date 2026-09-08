@@ -42,6 +42,10 @@ function matchesWhere(equipamento, where) {
     return false
   }
 
+  if (where.patrimonio !== undefined && equipamento.patrimonio !== where.patrimonio) {
+    return false
+  }
+
   return true
 }
 
@@ -55,11 +59,7 @@ export function createFakePrisma(initialEquipamentos = []) {
   const prisma = {
     equipamento: {
       async findUnique({ where }) {
-        return (
-          state.equipamentos.find(
-            (item) => item.serialNumber === where.serialNumber,
-          ) ?? null
-        )
+        return state.equipamentos.find((item) => matchesWhere(item, where)) ?? null
       },
 
       async findFirst({ where }) {

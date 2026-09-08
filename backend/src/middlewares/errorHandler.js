@@ -1,4 +1,5 @@
 import { AppError } from '../utils/appError.js'
+import { fromUniqueConstraintError } from '../utils/equipamentoConflict.js'
 
 function validationDetails(validation = []) {
   return validation.map((item) => ({
@@ -8,6 +9,8 @@ function validationDetails(validation = []) {
 }
 
 export function errorHandler(error, request, reply) {
+  error = fromUniqueConstraintError(error) ?? error
+
   if (error instanceof AppError) {
     return reply.code(error.statusCode).send({
       error: error.code,
@@ -21,14 +24,6 @@ export function errorHandler(error, request, reply) {
       error: 'REQUISICAO_INVALIDA',
       message: 'Os dados enviados são inválidos.',
       details: validationDetails(error.validation),
-    })
-  }
-
-  if (error.code === 'P2002') {
-    return reply.code(409).send({
-      error: 'SERIAL_DUPLICADO',
-      message: 'Equipamento com esse número de série já existe.',
-      details: [],
     })
   }
 
