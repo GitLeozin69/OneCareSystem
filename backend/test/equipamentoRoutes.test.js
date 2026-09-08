@@ -108,3 +108,31 @@ test('erros de domínio são retornados sem detalhes internos', async (context) 
     details: [],
   })
 })
+
+test('erros de conexão permanecem genéricos na resposta HTTP', async (context) => {
+  const service = createServiceStub()
+  service.create = async () => {
+    const error = new Error(
+      'pool timeout com informações internas que não podem ser expostas',
+    )
+    error.code = 'P2039'
+    error.meta = { driverAdapterError: { cause: { originalCode: '45028' } } }
+    throw error
+  }
+  const app = buildApp({ equipamentoService: service, logger: false })
+  context.after(() => app.close())
+
+  const response = await app.inject({
+    method: 'POST',
+    url: '/equipamentos',
+    payload: validPayload(),
+  })
+
+  assert.equal(response.statusCode, 500)
+  assert.deepEqual(response.json(), {
+    error: 'ERRO_INTERNO',
+    message: 'Não foi possível processar a solicitação.',
+    details: [],
+  })
+  assert.doesNotMatch(response.body, /pool timeout|45028/)
+})

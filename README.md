@@ -135,10 +135,11 @@ Na raiz do projeto:
 ```powershell
 npm.cmd run lint
 npm.cmd run test
+npm.cmd run test:integration
 npm.cmd run build
 ```
 
-O build do backend verifica a sintaxe dos arquivos JavaScript. O frontend gera os arquivos de produção em `frontend/dist`.
+O teste de integração usa o MySQL configurado no `.env`, exercita `POST` e `GET` dentro de uma transação e faz rollback ao final, sem manter o equipamento de teste. O build do backend verifica a sintaxe dos arquivos JavaScript. O frontend gera os arquivos de produção em `frontend/dist`.
 
 ## Estrutura atual
 
