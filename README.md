@@ -2,7 +2,7 @@
 
 Sistema web para controle de equipamentos vinculados a contratos OneCare.
 
-O projeto está na Etapa 3A: estrutura base, banco configurado e API básica de equipamentos. Pesquisa, paginação, importação, status, dashboard, notificações e telas funcionais ainda não estão implementados.
+O projeto está na Etapa 3B: estrutura base, banco configurado e API de equipamentos com listagem, pesquisa, paginação e ordenação. Importação, status, dashboard, notificações e telas funcionais ainda não estão implementados.
 
 ## Tecnologias
 
@@ -104,6 +104,7 @@ Endpoints implementados:
 
 ```http
 POST   /equipamentos
+GET    /equipamentos
 GET    /equipamentos/arquivados
 GET    /equipamentos/:id
 PATCH  /equipamentos/:id
@@ -131,6 +132,44 @@ As datas da API utilizam `AAAA-MM-DD`. `patrimonio`, `contratoOnecare` e `dataUl
 O patrimônio informado recebe `trim` e deve ser único globalmente, inclusive entre equipamentos arquivados. Valor vazio ou somente espaços vira `null`; vários equipamentos podem ficar sem patrimônio. O formato é preservado. Duplicidade no cadastro ou na edição retorna `409`, código `PATRIMONIO_DUPLICADO` e mensagem `Já existe um equipamento com esse patrimônio.`. A edição permite manter o próprio patrimônio. A futura importação por Excel deverá rejeitar patrimônios duplicados no sistema ou em outra linha válida da planilha.
 
 A migration `20260908172841_unique_patrimonio` adiciona somente o índice `uq_equipamentos_patrimonio`. Antes de aplicá-la a uma base com dados, verifique duplicidades e resolva-as com autorização do responsável; a migration não apaga nem ajusta registros.
+
+### Listagem, pesquisa, paginação e ordenação
+
+`GET /equipamentos` retorna somente equipamentos não arquivados. Os parâmetros são opcionais:
+
+- `q`: pesquisa parcial em `serialNumber`, `partNumber`, `patrimonio`, `cliente` e `contratoOnecare`; espaços nas extremidades são ignorados;
+- `page`: página atual, padrão `1`;
+- `limit`: itens por página, padrão `20` e máximo `100`;
+- `sortBy`: campo de ordenação, padrão `createdAt`;
+- `order`: direção `asc` ou `desc`, padrão `desc`.
+
+Os campos aceitos em `sortBy` são `serialNumber`, `partNumber`, `patrimonio`, `cliente`, `contratoOnecare`, `dataInicioOnecare`, `dataFimOnecare`, `createdAt` e `updatedAt`.
+
+Empates são resolvidos pelo ID, na mesma direção. `q` vazio ou somente com espaços não aplica pesquisa. Parâmetros inválidos, desconhecidos ou repetidos retornam `400 PARAMETRO_INVALIDO`, com mensagem e detalhes do campo. `page` deve ser um inteiro positivo representável com segurança em JavaScript; páginas além dos resultados retornam uma lista vazia.
+
+Exemplo:
+
+```http
+GET /equipamentos?q=SN123&page=1&limit=20&sortBy=createdAt&order=desc
+```
+
+Resposta:
+
+```json
+{
+  "data": [],
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "total": 0,
+    "totalPages": 0
+  },
+  "sort": {
+    "sortBy": "createdAt",
+    "order": "desc"
+  }
+}
+```
 
 ## Verificações
 

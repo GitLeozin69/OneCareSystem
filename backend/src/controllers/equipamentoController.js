@@ -2,6 +2,24 @@ import { serializeEquipamento } from '../utils/equipamentoSerializer.js'
 
 export function createEquipamentoController(equipamentoService) {
   return {
+    async list(request) {
+      const result = await equipamentoService.list(request.query)
+
+      return {
+        data: result.equipamentos.map(serializeEquipamento),
+        pagination: {
+          page: result.page,
+          limit: result.limit,
+          total: result.total,
+          totalPages: result.totalPages,
+        },
+        sort: {
+          sortBy: result.sortBy,
+          order: result.order,
+        },
+      }
+    },
+
     async create(request, reply) {
       const equipamento = await equipamentoService.create(request.body)
 

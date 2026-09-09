@@ -19,34 +19,49 @@ export function createEquipamentoRecord(overrides = {}) {
   }
 }
 
-function matchesWhere(equipamento, where) {
-  if (where.id !== undefined && equipamento.id !== where.id) {
-    return false
-  }
-
+function matchesValue(value, condition) {
   if (
-    where.arquivado !== undefined &&
-    equipamento.arquivado !== where.arquivado
+    condition &&
+    typeof condition === 'object' &&
+    !(condition instanceof Date)
   ) {
+    if (Object.hasOwn(condition, 'contains')) {
+      return value !== null && value !== undefined &&
+        String(value).toLocaleLowerCase().includes(
+          String(condition.contains).toLocaleLowerCase(),
+        )
+    }
+  }
+
+  return value === condition
+}
+
+function matchesWhere(equipamento, where = {}) {
+  if (where.OR && !where.OR.some((condition) => matchesWhere(equipamento, condition))) {
     return false
   }
 
-  if (
-    where.serialNumber !== undefined &&
-    equipamento.serialNumber !== where.serialNumber
-  ) {
+  if (where.NOT && matchesWhere(equipamento, where.NOT)) {
     return false
   }
 
-  if (where.NOT?.id !== undefined && equipamento.id === where.NOT.id) {
-    return false
+  return Object.entries(where).every(([field, condition]) => {
+    if (field === 'OR' || field === 'NOT') return true
+    return matchesValue(equipamento[field], condition)
+  })
+}
+
+function compareValues(left, right) {
+  if (left === right) return 0
+  if (left === null || left === undefined) return -1
+  if (right === null || right === undefined) return 1
+  if (typeof left === 'number' && typeof right === 'number') return left - right
+
+  if (left instanceof Date && right instanceof Date) {
+    return left.getTime() - right.getTime()
   }
 
-  if (where.patrimonio !== undefined && equipamento.patrimonio !== where.patrimonio) {
-    return false
-  }
-
-  return true
+  return String(left).localeCompare(String(right), 'pt-BR')
 }
 
 export function createFakePrisma(initialEquipamentos = []) {
@@ -86,8 +101,32 @@ export function createFakePrisma(initialEquipamentos = []) {
         return equipamento
       },
 
-      async findMany({ where }) {
-        return state.equipamentos.filter((item) => matchesWhere(item, where))
+      async findMany({ where, orderBy, skip = 0, take } = {}) {
+        const equipamentos = state.equipamentos.filter(
+          (item) => matchesWhere(item, where),
+        )
+
+        if (orderBy) {
+          const rules = Array.isArray(orderBy) ? orderBy : [orderBy]
+          equipamentos.sort((left, right) => {
+            for (const rule of rules) {
+              const [field, order] = Object.entries(rule)[0]
+              const comparison = compareValues(left[field], right[field])
+
+              if (comparison !== 0) {
+                return order === 'desc' ? -comparison : comparison
+              }
+            }
+
+            return 0
+          })
+        }
+
+        return equipamentos.slice(skip, take === undefined ? undefined : skip + take)
+      },
+
+      async count({ where } = {}) {
+        return state.equipamentos.filter((item) => matchesWhere(item, where)).length
       },
     },
 

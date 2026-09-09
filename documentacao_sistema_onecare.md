@@ -352,38 +352,57 @@ Excluir
 
 ## 14. Pesquisa, filtros e paginação
 
-A tela de equipamentos deve permitir pesquisa.
-
-Inicialmente, permitir busca por:
-- Número de série
-- Part Number
-- Cliente
-- Patrimônio
-- Contrato OneCare
-
-Também deve ser possível filtrar por status:
-
-```text
-Todos
-Ativos
-Vencendo
-Vencidos
-```
-
-A API deve oferecer paginação e ordenação. Formato inicial:
+A listagem operacional está disponível em:
 
 ```http
-GET /equipamentos?page=1&limit=20&search=SN123&status=VENCENDO&orderBy=dataFimOnecare&order=asc
+GET /equipamentos?q=SN123&page=1&limit=20&sortBy=createdAt&order=desc
 ```
 
-Regras:
-- `page` inicia em `1`;
-- `limit` padrão igual a `20` e máximo igual a `100`;
-- a ordenação padrão da API será por `dataFimOnecare` em ordem crescente (`asc`);
-- registros arquivados ficam fora da listagem principal;
-- a resposta deve incluir `items`, `page`, `limit`, `total` e `totalPages`.
+Os parâmetros são opcionais:
 
-Filtros adicionais podem ser implementados futuramente.
+- `q`: pesquisa textual parcial;
+- `page`: página atual, padrão `1`;
+- `limit`: quantidade por página, padrão `20` e máximo `100`;
+- `sortBy`: campo de ordenação, padrão `createdAt`;
+- `order`: direção da ordenação, padrão `desc`.
+
+A pesquisa por `q` remove espaços das extremidades e consulta os campos `serialNumber`, `partNumber`, `patrimonio`, `cliente` e `contratoOnecare`. Valor vazio ou contendo somente espaços equivale a não informar a pesquisa.
+
+Os campos permitidos em `sortBy` são:
+
+- `serialNumber`;
+- `partNumber`;
+- `patrimonio`;
+- `cliente`;
+- `contratoOnecare`;
+- `dataInicioOnecare`;
+- `dataFimOnecare`;
+- `createdAt`;
+- `updatedAt`.
+
+`order` aceita somente `asc` ou `desc`. `page` deve ser um inteiro maior ou igual a `1`, e `limit` deve ser um inteiro entre `1` e `100`. Parâmetros inválidos retornam HTTP `400`.
+
+Empates são resolvidos pelo ID na mesma direção da ordenação. `page` deve ser representável com segurança como inteiro em JavaScript. Parâmetros inválidos, desconhecidos ou repetidos retornam código `PARAMETRO_INVALIDO`, mensagem e detalhes do campo.
+
+Registros arquivados ficam fora da listagem e de sua contagem. Uma página válida sem registros retorna `data` vazio. O formato da resposta é:
+
+```json
+{
+  "data": [],
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "total": 0,
+    "totalPages": 0
+  },
+  "sort": {
+    "sortBy": "createdAt",
+    "order": "desc"
+  }
+}
+```
+
+O filtro por status permanece reservado para a Etapa 4, quando o cálculo oficial de status for implementado no backend. Filtros adicionais podem ser implementados futuramente.
 
 ## 15. Cadastro e edição
 

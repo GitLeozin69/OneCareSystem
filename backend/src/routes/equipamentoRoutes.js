@@ -34,6 +34,8 @@ const idParamsSchema = {
 export async function equipamentoRoutes(app, options) {
   const controller = createEquipamentoController(options.equipamentoService)
 
+  app.get('/', controller.list)
+
   app.post(
     '/',
     {

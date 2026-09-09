@@ -9,6 +9,7 @@ import {
   normalizeEquipamentoId,
   normalizeUpdateEquipamento,
 } from '../utils/equipamentoValidation.js'
+import { normalizeEquipamentoListQuery } from '../utils/equipamentoListValidation.js'
 
 function notFoundError() {
   return new AppError({
@@ -35,6 +36,46 @@ function contractChanged(current, changes) {
 
 export function createEquipamentoService({ prisma, clock = () => new Date() }) {
   return {
+    async list(query) {
+      const normalized = normalizeEquipamentoListQuery(query)
+      const where = { arquivado: false }
+
+      if (normalized.q) {
+        where.OR = [
+          { serialNumber: { contains: normalized.q } },
+          { partNumber: { contains: normalized.q } },
+          { patrimonio: { contains: normalized.q } },
+          { cliente: { contains: normalized.q } },
+          { contratoOnecare: { contains: normalized.q } },
+        ]
+      }
+
+      const total = await prisma.equipamento.count({ where })
+      const totalPages = Math.ceil(total / normalized.limit)
+      // Evita calcular offsets enormes para páginas que não possuem resultados.
+      const equipamentos = normalized.page > totalPages
+        ? []
+        : await prisma.equipamento.findMany({
+          where,
+          orderBy: [
+            { [normalized.sortBy]: normalized.order },
+            { id: normalized.order },
+          ],
+          skip: (normalized.page - 1) * normalized.limit,
+          take: normalized.limit,
+        })
+
+      return {
+        equipamentos,
+        page: normalized.page,
+        limit: normalized.limit,
+        total,
+        totalPages,
+        sortBy: normalized.sortBy,
+        order: normalized.order,
+      }
+    },
+
     async create(payload) {
       const data = normalizeCreateEquipamento(payload)
       const duplicate = await prisma.equipamento.findUnique({

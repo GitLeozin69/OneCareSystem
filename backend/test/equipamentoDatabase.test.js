@@ -23,7 +23,7 @@ test('configura host, pool e timeouts sem expor credenciais', () => {
 })
 
 test(
-  'POST e GET de equipamento funcionam com o MySQL real',
+  'POST, GET e listagem de equipamento funcionam com o MySQL real',
   { skip: databaseTestEnabled ? false : 'requer DATABASE_URL configurada' },
   async () => {
     const url = new URL(process.env.DATABASE_URL)
@@ -66,6 +66,29 @@ test(
 
           assert.equal(getResponse.statusCode, 200)
           assert.deepEqual(getResponse.json().item, created)
+
+          const listResponse = await app.inject({
+            method: 'GET',
+            url: `/equipamentos?q=${serialNumber}&limit=1&sortBy=serialNumber&order=asc`,
+          })
+
+          assert.equal(listResponse.statusCode, 200)
+          assert.deepEqual(listResponse.json().data, [created])
+          assert.equal(listResponse.json().pagination.total, 1)
+          assert.equal(listResponse.json().pagination.totalPages, 1)
+
+          const archiveResponse = await app.inject({
+            method: 'DELETE',
+            url: `/equipamentos/${created.id}`,
+          })
+          assert.equal(archiveResponse.statusCode, 200)
+
+          const afterArchive = await app.inject({
+            method: 'GET',
+            url: `/equipamentos?q=${serialNumber}`,
+          })
+          assert.deepEqual(afterArchive.json().data, [])
+          assert.equal(afterArchive.json().pagination.total, 0)
 
           throw rollback
         } finally {
