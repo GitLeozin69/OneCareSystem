@@ -330,6 +330,10 @@ Criar uma tela de listagem dos equipamentos.
 
 Na Etapa 3C, a interface apresenta os não arquivados, inclusive contratos vencidos, com pesquisa, ordenação, paginação, cadastro e edição integrados à API. Os campos opcionais sem valor aparecem como “—”. As datas são exibidas em `DD/MM/AAAA`, mantendo `AAAA-MM-DD` na comunicação com o backend. Status e indicadores de vencimento permanecem reservados à Etapa 4.
 
+Na Etapa 3D, a listagem operacional permite arquivar com confirmação explícita contendo o serial. A área `Equipamentos arquivados` reutiliza pesquisa, paginação e ordenação, informa a data do arquivamento e permite restaurar após confirmação. A interface impede ações repetidas durante arquivamento e restauração e atualiza a página atual sem recarregar o navegador.
+
+O histórico de contratos pode ser aberto na listagem ou na edição e funciona para equipamentos ativos e arquivados. Cada evento identifica explicitamente os valores anterior e novo, do mais recente para o mais antigo. Datas contratuais são exibidas em `DD/MM/AAAA` e o instante da substituição no fuso `America/Fortaleza`.
+
 Além da listagem principal, criar uma visualização ou filtro específico chamado `Vencidos`, contendo os equipamentos cujo OneCare já terminou.
 
 A tabela deve permitir visualizar, no mínimo:
@@ -404,6 +408,8 @@ Registros arquivados ficam fora da listagem e de sua contagem. Uma página váli
 }
 ```
 
+`GET /equipamentos/arquivados` aceita os mesmos parâmetros, validações, campos de pesquisa e ordenação e retorna exatamente o mesmo formato, considerando somente registros arquivados.
+
 O filtro por status permanece reservado para a Etapa 4, quando o cálculo oficial de status for implementado no backend. Filtros adicionais podem ser implementados futuramente.
 
 ## 15. Cadastro e edição
@@ -424,7 +430,7 @@ Data de término
 
 O mesmo formulário pode ser reutilizado para edição.
 
-Na interface da Etapa 3C, o formulário inclui também a última conferência opcional. Serial, part number, cliente e as duas datas de cobertura são obrigatórios. Campos opcionais limpos são enviados como `null`. O formulário mantém os dados digitados em caso de erro, apresenta mensagens próximas aos campos e bloqueia envios repetidos durante o salvamento. Ao salvar ou cancelar, pesquisa e ordenação da listagem são preservadas. O histórico continua sob responsabilidade do backend.
+Na interface da Etapa 3C, o formulário inclui também a última conferência opcional. Serial, part number, cliente e as duas datas de cobertura são obrigatórios. Campos opcionais limpos são enviados como `null`. O formulário mantém os dados digitados em caso de erro, apresenta mensagens próximas aos campos e bloqueia envios repetidos durante o salvamento. Ao salvar ou cancelar, pesquisa e ordenação da listagem são preservadas. Na Etapa 3D, a edição também oferece acesso somente para leitura ao histórico mantido pelo backend.
 
 Antes de salvar:
 - Validar campos obrigatórios.
@@ -524,8 +530,39 @@ GET /equipamentos/arquivados
 
 Consultar histórico de contratos:
 ```http
-GET /equipamentos/:id/historico-contratos
+GET /equipamentos/:id/historico-contratos?page=1&limit=20
 ```
+
+A consulta funciona para equipamentos ativos e arquivados. `page` possui padrão `1`; `limit` possui padrão `20` e máximo `100`. Os parâmetros devem ser inteiros positivos, não podem ser repetidos e parâmetros desconhecidos são rejeitados com `400 PARAMETRO_INVALIDO`. Equipamento inexistente retorna `404`. A resposta, ordenada do evento mais recente para o mais antigo, é:
+
+```json
+{
+  "data": [
+    {
+      "id": 1,
+      "anterior": {
+        "contratoOnecare": "OC001",
+        "dataInicioOnecare": "2026-01-01",
+        "dataFimOnecare": "2026-12-31"
+      },
+      "novo": {
+        "contratoOnecare": "OC002",
+        "dataInicioOnecare": "2027-01-01",
+        "dataFimOnecare": "2027-12-31"
+      },
+      "substituidoEm": "2026-09-09T12:00:00.000Z"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "total": 1,
+    "totalPages": 1
+  }
+}
+```
+
+A tabela existente armazena a fotografia anterior de cada substituição. A API deriva o valor novo a partir do contrato atual ou da fotografia da alteração imediatamente posterior, inclusive nos limites entre páginas. A consulta não cria nem modifica registros.
 
 Validar planilha e gerar prévia:
 ```http
@@ -765,8 +802,9 @@ A ação de exclusão da interface deve arquivar o equipamento e exigir confirma
 Equipamentos arquivados:
 - não aparecem nas listagens e indicadores principais;
 - não geram notificações;
-- podem ser consultados em uma área de arquivados por meio de `GET /equipamentos/arquivados`;
-- podem ser restaurados.
+- podem ser consultados em uma área de arquivados por meio de `GET /equipamentos/arquivados`, com os mesmos recursos de pesquisa, paginação e ordenação da listagem operacional;
+- podem ser restaurados após confirmação explícita;
+- continuam permitindo consulta somente para leitura ao histórico de contratos;
 - mantêm seu patrimônio reservado; outro equipamento não pode reutilizá-lo.
 
 Não implementar exclusão física pela interface na V1. O `ON DELETE CASCADE` permanece apenas para uma eventual operação administrativa futura.
@@ -1029,7 +1067,6 @@ Implementar:
 - vencido;
 - dias restantes;
 - tela de vencidos;
-- histórico simples de contratos.
 
 ### Etapa 5 — Dashboard
 Implementar:

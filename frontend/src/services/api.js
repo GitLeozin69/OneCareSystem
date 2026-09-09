@@ -67,6 +67,13 @@ export const equipamentosApi = {
     if (query.q) params.set('q', query.q)
     return request(`/equipamentos?${params}`, { signal })
   },
+  listArchived(query, signal) {
+    const params = new URLSearchParams({
+      page: query.page, limit: query.limit, sortBy: query.sortBy, order: query.order,
+    })
+    if (query.q) params.set('q', query.q)
+    return request(`/equipamentos/arquivados?${params}`, { signal })
+  },
   get(id, signal) {
     return request(`/equipamentos/${encodeURIComponent(id)}`, { signal })
   },
@@ -75,5 +82,15 @@ export const equipamentosApi = {
   },
   update(id, payload) {
     return request(`/equipamentos/${encodeURIComponent(id)}`, { method: 'PATCH', body: payload })
+  },
+  archive(id) {
+    return request(`/equipamentos/${encodeURIComponent(id)}`, { method: 'DELETE' })
+  },
+  restore(id) {
+    return request(`/equipamentos/${encodeURIComponent(id)}/restaurar`, { method: 'PATCH' })
+  },
+  history(id, query, signal) {
+    const params = new URLSearchParams({ page: query.page, limit: query.limit })
+    return request(`/equipamentos/${encodeURIComponent(id)}/historico-contratos?${params}`, { signal })
   },
 }

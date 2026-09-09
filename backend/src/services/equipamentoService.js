@@ -9,7 +9,10 @@ import {
   normalizeEquipamentoId,
   normalizeUpdateEquipamento,
 } from '../utils/equipamentoValidation.js'
-import { normalizeEquipamentoListQuery } from '../utils/equipamentoListValidation.js'
+import {
+  normalizeEquipamentoListQuery,
+  normalizePaginationQuery,
+} from '../utils/equipamentoListValidation.js'
 
 function notFoundError() {
   return new AppError({
@@ -34,46 +37,57 @@ function contractChanged(current, changes) {
   )
 }
 
+function contractSnapshot(source) {
+  return {
+    contratoOnecare: source.contratoOnecare,
+    dataInicioOnecare: source.dataInicioOnecare,
+    dataFimOnecare: source.dataFimOnecare,
+  }
+}
+
+async function listEquipamentos(prisma, query, arquivado) {
+  const normalized = normalizeEquipamentoListQuery(query)
+  const where = { arquivado }
+
+  if (normalized.q) {
+    where.OR = [
+      { serialNumber: { contains: normalized.q } },
+      { partNumber: { contains: normalized.q } },
+      { patrimonio: { contains: normalized.q } },
+      { cliente: { contains: normalized.q } },
+      { contratoOnecare: { contains: normalized.q } },
+    ]
+  }
+
+  const total = await prisma.equipamento.count({ where })
+  const totalPages = Math.ceil(total / normalized.limit)
+  const equipamentos = normalized.page > totalPages
+    ? []
+    : await prisma.equipamento.findMany({
+      where,
+      orderBy: [
+        { [normalized.sortBy]: normalized.order },
+        { id: normalized.order },
+      ],
+      skip: (normalized.page - 1) * normalized.limit,
+      take: normalized.limit,
+    })
+
+  return {
+    equipamentos,
+    page: normalized.page,
+    limit: normalized.limit,
+    total,
+    totalPages,
+    sortBy: normalized.sortBy,
+    order: normalized.order,
+  }
+}
+
 export function createEquipamentoService({ prisma, clock = () => new Date() }) {
   return {
     async list(query) {
-      const normalized = normalizeEquipamentoListQuery(query)
-      const where = { arquivado: false }
-
-      if (normalized.q) {
-        where.OR = [
-          { serialNumber: { contains: normalized.q } },
-          { partNumber: { contains: normalized.q } },
-          { patrimonio: { contains: normalized.q } },
-          { cliente: { contains: normalized.q } },
-          { contratoOnecare: { contains: normalized.q } },
-        ]
-      }
-
-      const total = await prisma.equipamento.count({ where })
-      const totalPages = Math.ceil(total / normalized.limit)
-      // Evita calcular offsets enormes para páginas que não possuem resultados.
-      const equipamentos = normalized.page > totalPages
-        ? []
-        : await prisma.equipamento.findMany({
-          where,
-          orderBy: [
-            { [normalized.sortBy]: normalized.order },
-            { id: normalized.order },
-          ],
-          skip: (normalized.page - 1) * normalized.limit,
-          take: normalized.limit,
-        })
-
-      return {
-        equipamentos,
-        page: normalized.page,
-        limit: normalized.limit,
-        total,
-        totalPages,
-        sortBy: normalized.sortBy,
-        order: normalized.order,
-      }
+      return listEquipamentos(prisma, query, false)
     },
 
     async create(payload) {
@@ -216,10 +230,58 @@ export function createEquipamentoService({ prisma, clock = () => new Date() }) {
       })
     },
 
-    async listArchived() {
-      return prisma.equipamento.findMany({
-        where: { arquivado: true },
+    async listArchived(query) {
+      return listEquipamentos(prisma, query, true)
+    },
+
+    async listContractHistory(rawId, query) {
+      const id = normalizeEquipamentoId(rawId)
+      const normalized = normalizePaginationQuery(query)
+      const equipamento = await prisma.equipamento.findUnique({
+        where: { id },
+        select: {
+          contratoOnecare: true,
+          dataInicioOnecare: true,
+          dataFimOnecare: true,
+        },
       })
+
+      if (!equipamento) throw notFoundError()
+
+      const where = { equipamentoId: id }
+      const total = await prisma.historicoContrato.count({ where })
+      const totalPages = Math.ceil(total / normalized.limit)
+      const offset = (normalized.page - 1) * normalized.limit
+      let historicos = []
+
+      if (normalized.page <= totalPages) {
+        historicos = await prisma.historicoContrato.findMany({
+          where,
+          orderBy: [{ substituidoEm: 'desc' }, { id: 'desc' }],
+          skip: Math.max(0, offset - 1),
+          take: normalized.limit + (offset > 0 ? 1 : 0),
+        })
+      }
+
+      let novo = offset === 0 ? equipamento : historicos.shift()
+      const data = historicos.map((historico) => {
+        const event = {
+          id: historico.id,
+          anterior: contractSnapshot(historico),
+          novo: contractSnapshot(novo),
+          substituidoEm: historico.substituidoEm,
+        }
+        novo = historico
+        return event
+      })
+
+      return {
+        data,
+        page: normalized.page,
+        limit: normalized.limit,
+        total,
+        totalPages,
+      }
     },
   }
 }

@@ -64,10 +64,10 @@ function compareValues(left, right) {
   return String(left).localeCompare(String(right), 'pt-BR')
 }
 
-export function createFakePrisma(initialEquipamentos = []) {
+export function createFakePrisma(initialEquipamentos = [], initialHistoricos = []) {
   const state = {
     equipamentos: [...initialEquipamentos],
-    historicos: [],
+    historicos: [...initialHistoricos],
     transactionCalls: 0,
   }
 
@@ -139,6 +139,26 @@ export function createFakePrisma(initialEquipamentos = []) {
         }
         state.historicos.push(historico)
         return historico
+      },
+
+      async findMany({ where, orderBy, skip = 0, take } = {}) {
+        const historicos = state.historicos.filter(
+          (item) => matchesWhere(item, where),
+        )
+        const rules = Array.isArray(orderBy) ? orderBy : [orderBy]
+        historicos.sort((left, right) => {
+          for (const rule of rules.filter(Boolean)) {
+            const [field, order] = Object.entries(rule)[0]
+            const comparison = compareValues(left[field], right[field])
+            if (comparison !== 0) return order === 'desc' ? -comparison : comparison
+          }
+          return 0
+        })
+        return historicos.slice(skip, take === undefined ? undefined : skip + take)
+      },
+
+      async count({ where } = {}) {
+        return state.historicos.filter((item) => matchesWhere(item, where)).length
       },
     },
 

@@ -209,7 +209,7 @@ test('arquivamento, listagem de arquivados e restauração funcionam', async () 
   assert.equal(archived.arquivadoEm, archivedAt)
 
   const archivedItems = await service.listArchived()
-  assert.equal(archivedItems.length, 1)
+  assert.equal(archivedItems.equipamentos.length, 1)
 
   await assertAppError(
     () => service.findById(current.id),
@@ -220,5 +220,5 @@ test('arquivamento, listagem de arquivados e restauração funcionam', async () 
   const restored = await service.restore(current.id)
   assert.equal(restored.arquivado, false)
   assert.equal(restored.arquivadoEm, null)
-  assert.equal((await service.listArchived()).length, 0)
+  assert.equal((await service.listArchived()).equipamentos.length, 0)
 })

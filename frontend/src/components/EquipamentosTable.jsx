@@ -1,13 +1,28 @@
-import { formatDate } from '../utils/equipamento.js'
+import { formatDate, formatDateTime } from '../utils/equipamento.js'
 import Button from './Button.jsx'
 
-export default function EquipamentosTable({ items, onEdit }) {
+export default function EquipamentosTable({
+  items,
+  archived,
+  busyId,
+  onArchive,
+  onEdit,
+  onHistory,
+  onRestore,
+}) {
+  const headings = [
+    'Serial', 'Part number', 'Cliente', 'Patrimônio', 'Contrato OneCare',
+    'Início do OneCare', 'Término do OneCare',
+    ...(archived ? ['Data do arquivamento'] : []),
+    'Ações',
+  ]
+
   return (
     <div className="overflow-x-auto" role="region" aria-label="Tabela de equipamentos, role horizontalmente se necessário" tabIndex={0}>
       <table className="w-full text-left text-sm">
-        <caption className="sr-only">Equipamentos não arquivados, incluindo contratos vencidos</caption>
+        <caption className="sr-only">{archived ? 'Equipamentos arquivados' : 'Equipamentos não arquivados, incluindo contratos vencidos'}</caption>
         <thead className="border-y border-slate-200 bg-slate-50 text-xs text-slate-600">
-          <tr>{['Serial', 'Part number', 'Cliente', 'Patrimônio', 'Contrato OneCare', 'Início do OneCare', 'Término do OneCare', 'Ações'].map((label) => (
+          <tr>{headings.map((label) => (
             <th key={label} scope="col" className="whitespace-nowrap px-5 py-4 font-semibold">{label}</th>
           ))}</tr>
         </thead>
@@ -21,7 +36,16 @@ export default function EquipamentosTable({ items, onEdit }) {
               <td className="max-w-48 break-words px-5 py-5 text-slate-600">{item.contratoOnecare || '—'}</td>
               <td className="whitespace-nowrap px-5 py-5 tabular-nums">{formatDate(item.dataInicioOnecare)}</td>
               <td className="whitespace-nowrap px-5 py-5 tabular-nums">{formatDate(item.dataFimOnecare)}</td>
-              <td className="px-5 py-5"><Button onClick={() => onEdit(item.id)} aria-label={`Editar ${item.serialNumber}`}>Editar</Button></td>
+              {archived && <td className="whitespace-nowrap px-5 py-5 tabular-nums">{formatDateTime(item.arquivadoEm)}</td>}
+              <td className="px-5 py-5">
+                <div className="flex gap-2">
+                  {!archived && <Button disabled={Boolean(busyId)} onClick={() => onEdit(item)} aria-label={`Editar ${item.serialNumber}`}>Editar</Button>}
+                  <Button disabled={Boolean(busyId)} onClick={() => onHistory(item)} aria-label={`Ver histórico de ${item.serialNumber}`}>Ver histórico</Button>
+                  {archived
+                    ? <Button disabled={Boolean(busyId)} onClick={() => onRestore(item)} aria-label={`Restaurar ${item.serialNumber}`}>{busyId === item.id ? 'Restaurando…' : 'Restaurar'}</Button>
+                    : <Button disabled={Boolean(busyId)} onClick={() => onArchive(item)} aria-label={`Arquivar ${item.serialNumber}`}>{busyId === item.id ? 'Arquivando…' : 'Arquivar'}</Button>}
+                </div>
+              </td>
             </tr>
           ))}
         </tbody>

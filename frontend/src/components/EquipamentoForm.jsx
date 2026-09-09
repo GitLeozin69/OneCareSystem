@@ -3,7 +3,7 @@ import { equipamentosApi } from '../services/api.js'
 import { fields, prepareEquipment, toFormValues } from '../utils/equipamento.js'
 import Button from './Button.jsx'
 
-export default function EquipamentoForm({ id, onCancel, onSaved }) {
+export default function EquipamentoForm({ id, onCancel, onSaved, onHistory }) {
   const [values, setValues] = useState(() => toFormValues())
   const [loading, setLoading] = useState(Boolean(id))
   const [loadError, setLoadError] = useState(null)
@@ -106,6 +106,7 @@ export default function EquipamentoForm({ id, onCancel, onSaved }) {
             {error && <p role="alert" className="mx-6 mb-6 rounded-lg bg-red-50 p-4 text-sm text-red-800 sm:mx-8">{error}</p>}
             <div className="flex flex-wrap items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-5 sm:px-8">
               {saving && <span role="status" className="mr-auto text-sm text-slate-600">Salvando equipamento…</span>}
+              {id && <Button onClick={onHistory} disabled={saving}>Ver histórico</Button>}
               <Button onClick={onCancel} disabled={saving}>Cancelar</Button>
               <Button type="submit" variant="primary" disabled={saving}>{saving ? 'Salvando…' : 'Salvar equipamento'}</Button>
             </div>

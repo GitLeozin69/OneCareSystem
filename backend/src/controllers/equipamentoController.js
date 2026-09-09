@@ -1,23 +1,28 @@
 import { serializeEquipamento } from '../utils/equipamentoSerializer.js'
+import { serializeHistoricoContrato } from '../utils/historicoContratoSerializer.js'
+
+function serializeList(result) {
+  return {
+    data: result.equipamentos.map(serializeEquipamento),
+    pagination: {
+      page: result.page,
+      limit: result.limit,
+      total: result.total,
+      totalPages: result.totalPages,
+    },
+    sort: {
+      sortBy: result.sortBy,
+      order: result.order,
+    },
+  }
+}
 
 export function createEquipamentoController(equipamentoService) {
   return {
     async list(request) {
       const result = await equipamentoService.list(request.query)
 
-      return {
-        data: result.equipamentos.map(serializeEquipamento),
-        pagination: {
-          page: result.page,
-          limit: result.limit,
-          total: result.total,
-          totalPages: result.totalPages,
-        },
-        sort: {
-          sortBy: result.sortBy,
-          order: result.order,
-        },
-      }
+      return serializeList(result)
     },
 
     async create(request, reply) {
@@ -65,11 +70,26 @@ export function createEquipamentoController(equipamentoService) {
       }
     },
 
-    async listArchived() {
-      const equipamentos = await equipamentoService.listArchived()
+    async listArchived(request) {
+      const result = await equipamentoService.listArchived(request.query)
+
+      return serializeList(result)
+    },
+
+    async listContractHistory(request) {
+      const result = await equipamentoService.listContractHistory(
+        request.params.id,
+        request.query,
+      )
 
       return {
-        items: equipamentos.map(serializeEquipamento),
+        data: result.data.map(serializeHistoricoContrato),
+        pagination: {
+          page: result.page,
+          limit: result.limit,
+          total: result.total,
+          totalPages: result.totalPages,
+        },
       }
     },
   }

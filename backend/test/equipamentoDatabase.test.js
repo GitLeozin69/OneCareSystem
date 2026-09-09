@@ -23,7 +23,7 @@ test('configura host, pool e timeouts sem expor credenciais', () => {
 })
 
 test(
-  'POST, GET e listagem de equipamento funcionam com o MySQL real',
+  'ciclo de equipamento e histórico funcionam com o MySQL real sem persistir dados',
   { skip: databaseTestEnabled ? false : 'requer DATABASE_URL configurada' },
   async () => {
     const url = new URL(process.env.DATABASE_URL)
@@ -36,8 +36,13 @@ test(
       const [database] = await prisma.$queryRawUnsafe('SELECT DATABASE() AS name')
       assert.equal(database.name.toLowerCase(), 'zebraonecare')
       await prisma.$transaction(async (transaction) => {
+        const scopedPrisma = {
+          equipamento: transaction.equipamento,
+          historicoContrato: transaction.historicoContrato,
+          $transaction: async (callback) => callback(transaction),
+        }
         const equipamentoService = createEquipamentoService({
-          prisma: transaction,
+          prisma: scopedPrisma,
         })
         const app = buildApp({ equipamentoService, logger: false })
 
@@ -77,6 +82,47 @@ test(
           assert.equal(listResponse.json().pagination.total, 1)
           assert.equal(listResponse.json().pagination.totalPages, 1)
 
+          const updateResponse = await app.inject({
+            method: 'PATCH',
+            url: `/equipamentos/${created.id}`,
+            payload: {
+              contratoOnecare: 'OC-REGRESSION',
+              dataFimOnecare: '2027-12-31',
+            },
+          })
+          assert.equal(updateResponse.statusCode, 200)
+          const updated = updateResponse.json().item
+
+          const historyResponse = await app.inject({
+            method: 'GET',
+            url: `/equipamentos/${created.id}/historico-contratos?page=1&limit=20`,
+          })
+          assert.equal(historyResponse.statusCode, 200)
+          assert.deepEqual(historyResponse.json(), {
+            data: [
+              {
+                id: historyResponse.json().data[0].id,
+                anterior: {
+                  contratoOnecare: null,
+                  dataInicioOnecare: '2026-01-01',
+                  dataFimOnecare: '2026-12-31',
+                },
+                novo: {
+                  contratoOnecare: 'OC-REGRESSION',
+                  dataInicioOnecare: '2026-01-01',
+                  dataFimOnecare: '2027-12-31',
+                },
+                substituidoEm: historyResponse.json().data[0].substituidoEm,
+              },
+            ],
+            pagination: {
+              page: 1,
+              limit: 20,
+              total: 1,
+              totalPages: 1,
+            },
+          })
+
           const archiveResponse = await app.inject({
             method: 'DELETE',
             url: `/equipamentos/${created.id}`,
@@ -89,6 +135,45 @@ test(
           })
           assert.deepEqual(afterArchive.json().data, [])
           assert.equal(afterArchive.json().pagination.total, 0)
+
+          const archivedList = await app.inject({
+            method: 'GET',
+            url: `/equipamentos/arquivados?q=${serialNumber}&limit=1&sortBy=serialNumber&order=asc`,
+          })
+          assert.equal(archivedList.statusCode, 200)
+          assert.equal(archivedList.json().data[0].id, created.id)
+          assert.equal(archivedList.json().data[0].arquivado, true)
+          assert.equal(archivedList.json().pagination.total, 1)
+
+          const archivedHistory = await app.inject({
+            method: 'GET',
+            url: `/equipamentos/${created.id}/historico-contratos`,
+          })
+          assert.equal(archivedHistory.statusCode, 200)
+          assert.equal(archivedHistory.json().pagination.total, 1)
+
+          const restoreResponse = await app.inject({
+            method: 'PATCH',
+            url: `/equipamentos/${created.id}/restaurar`,
+          })
+          assert.equal(restoreResponse.statusCode, 200)
+          assert.equal(restoreResponse.json().item.arquivado, false)
+
+          const afterRestore = await app.inject({
+            method: 'GET',
+            url: `/equipamentos?q=${serialNumber}`,
+          })
+          assert.equal(afterRestore.statusCode, 200)
+          assert.equal(afterRestore.json().data[0].id, updated.id)
+          assert.equal(afterRestore.json().pagination.total, 1)
+
+          const archivedAfterRestore = await app.inject({
+            method: 'GET',
+            url: `/equipamentos/arquivados?q=${serialNumber}`,
+          })
+          assert.equal(archivedAfterRestore.statusCode, 200)
+          assert.deepEqual(archivedAfterRestore.json().data, [])
+          assert.equal(archivedAfterRestore.json().pagination.total, 0)
 
           throw rollback
         } finally {

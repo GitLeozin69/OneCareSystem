@@ -60,6 +60,12 @@ export async function equipamentoRoutes(app, options) {
   app.get('/arquivados', controller.listArchived)
 
   app.get(
+    '/:id/historico-contratos',
+    { schema: { params: idParamsSchema } },
+    controller.listContractHistory,
+  )
+
+  app.get(
     '/:id',
     { schema: { params: idParamsSchema } },
     controller.findById,

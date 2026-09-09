@@ -21,6 +21,7 @@ const allowedParameters = new Set([
 ])
 const allowedSortFields = new Set(EQUIPAMENTO_SORT_FIELDS)
 const allowedOrders = new Set(['asc', 'desc'])
+const paginationParameters = new Set(['page', 'limit'])
 
 function invalidParameter(field, message) {
   return new AppError({
@@ -60,9 +61,9 @@ function normalizeQ(value) {
   return value.trim() || undefined
 }
 
-export function normalizeEquipamentoListQuery(query = {}) {
+function rejectUnknownParameters(query, allowed) {
   const unknownParameter = Object.keys(query).find(
-    (parameter) => !allowedParameters.has(parameter),
+    (parameter) => !allowed.has(parameter),
   )
 
   if (unknownParameter) {
@@ -71,6 +72,24 @@ export function normalizeEquipamentoListQuery(query = {}) {
       'Este parâmetro não é aceito nesta consulta.',
     )
   }
+}
+
+export function normalizePaginationQuery(query = {}) {
+  rejectUnknownParameters(query, paginationParameters)
+
+  return {
+    page: normalizePositiveInteger(
+      query.page,
+      'page',
+      1,
+      Number.MAX_SAFE_INTEGER,
+    ),
+    limit: normalizePositiveInteger(query.limit, 'limit', 20, 100),
+  }
+}
+
+export function normalizeEquipamentoListQuery(query = {}) {
+  rejectUnknownParameters(query, allowedParameters)
 
   const page = normalizePositiveInteger(query.page, 'page', 1, Number.MAX_SAFE_INTEGER)
   const limit = normalizePositiveInteger(query.limit, 'limit', 20, 100)

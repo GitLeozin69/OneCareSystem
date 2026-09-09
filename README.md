@@ -2,7 +2,7 @@
 
 Sistema web para controle de equipamentos vinculados a contratos OneCare.
 
-O projeto está na Etapa 3C: API e interface de equipamentos com listagem, pesquisa, paginação, ordenação, cadastro e edição. Arquivados e histórico na interface, importação, status, dashboard e notificações ainda não estão implementados.
+O projeto está na Etapa 3D: API e interface de equipamentos com listagem, pesquisa, paginação, ordenação, cadastro, edição, arquivamento, restauração e consulta do histórico de contratos. Importação, status, dashboard e notificações ainda não estão implementados.
 
 ## Tecnologias
 
@@ -110,17 +110,23 @@ A página lista todos os equipamentos não arquivados, inclusive com contratos j
 
 As datas da tabela são exibidas em `DD/MM/AAAA`. Os formulários usam controles nativos de data (a aparência depende do idioma do navegador), enviando `AAAA-MM-DD`, sem conversão de fuso. A interface apresenta carregamento, resultados vazios, erros com nova tentativa, conflitos próximos aos campos e confirmação de salvamento. Durante o envio, os controles são desabilitados.
 
+“Arquivar” pede confirmação com o serial e retira logicamente o equipamento da listagem operacional. A área “Equipamentos arquivados” possui pesquisa, paginação e ordenação equivalentes, exibe a data do arquivamento e permite restaurar após confirmação. A interface bloqueia ações repetidas enquanto uma dessas operações está em andamento.
+
+“Ver histórico” está disponível na listagem e na edição, para equipamentos ativos ou arquivados. A visualização mostra os valores anterior e novo de cada alteração contratual, do evento mais recente para o mais antigo, com paginação. Datas contratuais usam `DD/MM/AAAA`; o instante da substituição é apresentado no fuso `America/Fortaleza`.
+
 ### Roteiro manual
 
 1. Inicie backend e frontend nos dois terminais acima e abra `http://127.0.0.1:5173`.
 2. Pesquise por um serial ou cliente, envie também com Enter, limpe a pesquisa e altere ordenação/limite. Havendo mais registros que o limite, navegue entre páginas.
 3. Cadastre um equipamento exclusivo de teste com serial alfanumérico e datas válidas. Confira a confirmação e a atualização da lista; anote o serial criado.
 4. Edite apenas esse registro de teste, limpe os opcionais e confira que aparecem como “—”. Tente serial inválido, datas invertidas e duplicidade com outro registro de teste, se houver.
-5. Durante um salvamento, confirme que o botão não permite novo envio. Cancele um formulário e confira que os filtros continuam iguais.
-6. Pare o backend, faça uma pesquisa e confira o erro. Reinicie-o e use “Tentar novamente”.
-7. Use Tab/Enter para navegar e teste em janela estreita: formulário em uma coluna, botões acessíveis e tabela com rolagem horizontal.
+5. Consulte o histórico pela listagem e pela edição. Altere os dados contratuais do registro de teste e confirme os valores anterior e novo.
+6. Arquive o registro de teste após conferir o serial na confirmação. Abra “Equipamentos arquivados”, pesquise-o, confira a data de arquivamento e o histórico, e então restaure-o.
+7. Durante salvamento, arquivamento ou restauração, confirme que os controles não permitem ações repetidas. Cancele um formulário e confira que os filtros continuam iguais.
+8. Pare o backend, faça uma pesquisa e confira o erro. Reinicie-o e use “Tentar novamente”.
+9. Use Tab/Enter para navegar e teste em janela estreita: formulário em uma coluna, botões acessíveis e tabela com rolagem horizontal.
 
-Não altere equipamentos reais para esses testes. Registros criados manualmente permanecem no banco; não há exclusão pela interface nesta etapa.
+Não altere equipamentos reais para esses testes. Registros criados manualmente permanecem no banco; a interface não realiza exclusão física.
 
 ## API de equipamentos
 
@@ -134,6 +140,7 @@ GET    /equipamentos/:id
 PATCH  /equipamentos/:id
 DELETE /equipamentos/:id
 PATCH  /equipamentos/:id/restaurar
+GET    /equipamentos/:id/historico-contratos
 ```
 
 O cadastro utiliza propriedades em `camelCase`:
@@ -195,6 +202,41 @@ Resposta:
 }
 ```
 
+`GET /equipamentos/arquivados` aceita os mesmos parâmetros e devolve o mesmo formato, considerando exclusivamente equipamentos arquivados. `DELETE /equipamentos/:id` realiza arquivamento lógico e `PATCH /equipamentos/:id/restaurar` devolve o registro à listagem operacional.
+
+### Histórico de contratos
+
+`GET /equipamentos/:id/historico-contratos?page=1&limit=20` funciona para equipamentos ativos e arquivados. `page` tem padrão `1`; `limit` tem padrão `20` e máximo `100`. Os eventos são ordenados do mais recente para o mais antigo e retornam o formato:
+
+```json
+{
+  "data": [
+    {
+      "id": 1,
+      "anterior": {
+        "contratoOnecare": "OC001",
+        "dataInicioOnecare": "2026-01-01",
+        "dataFimOnecare": "2026-12-31"
+      },
+      "novo": {
+        "contratoOnecare": "OC002",
+        "dataInicioOnecare": "2027-01-01",
+        "dataFimOnecare": "2027-12-31"
+      },
+      "substituidoEm": "2026-09-09T12:00:00.000Z"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "total": 1,
+    "totalPages": 1
+  }
+}
+```
+
+Uma página válida sem eventos retorna `data` vazio. Equipamento inexistente retorna `404`; parâmetros inválidos, desconhecidos ou repetidos retornam `400 PARAMETRO_INVALIDO`. A consulta é somente leitura: o histórico continua sendo gravado apenas quando uma edição realmente modifica número ou datas do contrato.
+
 ## Verificações
 
 Na raiz do projeto:
@@ -210,7 +252,7 @@ npm.cmd run build
 
 O Vitest foi configurado seguindo seu [guia oficial](https://vitest.dev/guide/); o proxy usa a [configuração oficial do Vite](https://vite.dev/config/server-options.html#server-proxy).
 
-Os testes de integração usam exclusivamente o banco de desenvolvimento `ZebraOneCare` configurado no `.env`. Exercitam cadastro, consulta, edição, reserva de patrimônio em arquivados, múltiplos `NULL` e rejeição de duplicidade pelo índice real. As transações fazem rollback ao final, sem manter equipamentos de teste nem apagar registros existentes; podem ocorrer lacunas normais nos IDs auto-incrementais. O build do backend verifica a sintaxe dos arquivos JavaScript. O frontend gera os arquivos de produção em `frontend/dist`.
+Os testes de integração usam exclusivamente o banco de desenvolvimento `ZebraOneCare` configurado no `.env`. Exercitam cadastro, consulta, edição, histórico, arquivamento, listagem de arquivados, restauração, reserva de patrimônio em arquivados, múltiplos `NULL` e rejeição de duplicidade pelo índice real. As transações fazem rollback ao final, sem manter equipamentos de teste nem apagar registros existentes; podem ocorrer lacunas normais nos IDs auto-incrementais. O build do backend verifica a sintaxe dos arquivos JavaScript. O frontend gera os arquivos de produção em `frontend/dist`.
 
 ## Estrutura atual
 

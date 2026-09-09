@@ -25,7 +25,18 @@ function createServiceStub() {
       return item
     },
     async listArchived() {
-      return [{ ...item, arquivado: true }]
+      return {
+        equipamentos: [{ ...item, arquivado: true }],
+        page: 1,
+        limit: 20,
+        total: 1,
+        totalPages: 1,
+        sortBy: 'createdAt',
+        order: 'desc',
+      }
+    },
+    async listContractHistory() {
+      return { data: [], page: 1, limit: 20, total: 0, totalPages: 0 }
     },
   }
 }
@@ -58,6 +69,7 @@ test('rotas de equipamentos retornam respostas padronizadas', async (context) =>
     ['DELETE', '/equipamentos/1'],
     ['PATCH', '/equipamentos/1/restaurar'],
     ['GET', '/equipamentos/arquivados'],
+    ['GET', '/equipamentos/1/historico-contratos'],
   ]
 
   for (const [method, url, payload] of requests) {
