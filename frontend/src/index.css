@@ -1,1 +1,19 @@
 @import "tailwindcss";
+
+@layer base {
+  body { @apply m-0 min-w-80 bg-slate-50 text-slate-900 antialiased; font-family: system-ui, sans-serif; }
+  button, input, select { font: inherit; }
+  button:not(:disabled) { cursor: pointer; }
+  :focus-visible { @apply outline-2 outline-offset-4 outline-teal-700; }
+}
+
+@layer components {
+  .panel { @apply rounded-2xl border border-slate-200 bg-white shadow-sm; }
+  .eyebrow { @apply text-xs font-semibold tracking-widest text-teal-800; }
+  .field-label { @apply mb-2 block text-sm font-medium text-slate-700; }
+  .input { @apply min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 disabled:bg-slate-100; }
+  .input[aria-invalid="true"] { @apply border-red-600; }
+  .btn { @apply inline-flex min-h-11 items-center justify-center rounded-lg border px-4 py-2 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50; }
+  .btn-primary { @apply border-teal-800 bg-teal-800 text-white enabled:hover:bg-teal-900; }
+  .btn-secondary { @apply border-slate-300 bg-white text-slate-700 enabled:hover:bg-slate-100; }
+}

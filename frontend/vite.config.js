@@ -1,8 +1,20 @@
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 
-export default defineConfig({
-  envDir: '..',
-  plugins: [react(), tailwindcss()],
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, '..', 'VITE_')
+  const proxy = {
+    '/api': {
+      target: env.VITE_API_URL || 'http://127.0.0.1:3000',
+      changeOrigin: true,
+      rewrite: (path) => path.replace(/^\/api/, ''),
+    },
+  }
+  return {
+    envDir: '..',
+    plugins: [react(), tailwindcss()],
+    server: { host: '127.0.0.1', port: 5173, strictPort: true, proxy },
+    preview: { host: '127.0.0.1', proxy },
+  }
 })

@@ -2,7 +2,7 @@
 
 Sistema web para controle de equipamentos vinculados a contratos OneCare.
 
-O projeto está na Etapa 3B: estrutura base, banco configurado e API de equipamentos com listagem, pesquisa, paginação e ordenação. Importação, status, dashboard, notificações e telas funcionais ainda não estão implementados.
+O projeto está na Etapa 3C: API e interface de equipamentos com listagem, pesquisa, paginação, ordenação, cadastro e edição. Arquivados e histórico na interface, importação, status, dashboard e notificações ainda não estão implementados.
 
 ## Tecnologias
 
@@ -96,7 +96,31 @@ Por padrão:
 
 - backend: `http://localhost:3000`
 - verificação de saúde: `http://localhost:3000/health`
-- frontend: endereço informado pelo Vite no terminal
+- frontend: `http://127.0.0.1:5173` (porta fixa; se estiver ocupada, o Vite informa o erro)
+
+O navegador chama `/api/equipamentos` na mesma origem do frontend. O proxy local do Vite remove `/api` e encaminha a chamada ao endereço definido em `VITE_API_URL` no `.env` da raiz (padrão: `http://127.0.0.1:3000`). O exemplo existente `http://localhost:3000` também pode ser usado. Reinicie o Vite após alterar essa configuração. O backend continua expondo `/equipamentos`, sem alteração de CORS.
+
+O proxy também está configurado no `npm.cmd --prefix frontend run preview`. Para hospedagem futura dos arquivos estáticos, será necessário configurar o servidor de hospedagem para encaminhar `/api` ao backend; esse proxy do Vite serve apenas ao desenvolvimento/preview. Não coloque credenciais em variáveis `VITE_`, pois elas são públicas.
+
+### Interface de equipamentos
+
+A página lista todos os equipamentos não arquivados, inclusive com contratos já vencidos. A pesquisa é enviada por “Pesquisar” ou Enter e pode ser limpa. Pesquisa, limite e ordenação voltam à primeira página quando alterados; os filtros são preservados ao sair do formulário. Requisições substituídas são canceladas e respostas antigas são ignoradas.
+
+“Novo equipamento” abre o cadastro; “Editar” carrega o equipamento pela API. São obrigatórios serial, part number, cliente, início e término do OneCare. Patrimônio, número do contrato e última conferência são opcionais; limpar um valor envia `null`. O serial é normalizado para maiúsculas. Somente campos editáveis são enviados e a API continua responsável pela unicidade e pelo histórico.
+
+As datas da tabela são exibidas em `DD/MM/AAAA`. Os formulários usam controles nativos de data (a aparência depende do idioma do navegador), enviando `AAAA-MM-DD`, sem conversão de fuso. A interface apresenta carregamento, resultados vazios, erros com nova tentativa, conflitos próximos aos campos e confirmação de salvamento. Durante o envio, os controles são desabilitados.
+
+### Roteiro manual
+
+1. Inicie backend e frontend nos dois terminais acima e abra `http://127.0.0.1:5173`.
+2. Pesquise por um serial ou cliente, envie também com Enter, limpe a pesquisa e altere ordenação/limite. Havendo mais registros que o limite, navegue entre páginas.
+3. Cadastre um equipamento exclusivo de teste com serial alfanumérico e datas válidas. Confira a confirmação e a atualização da lista; anote o serial criado.
+4. Edite apenas esse registro de teste, limpe os opcionais e confira que aparecem como “—”. Tente serial inválido, datas invertidas e duplicidade com outro registro de teste, se houver.
+5. Durante um salvamento, confirme que o botão não permite novo envio. Cancele um formulário e confira que os filtros continuam iguais.
+6. Pare o backend, faça uma pesquisa e confira o erro. Reinicie-o e use “Tentar novamente”.
+7. Use Tab/Enter para navegar e teste em janela estreita: formulário em uma coluna, botões acessíveis e tabela com rolagem horizontal.
+
+Não altere equipamentos reais para esses testes. Registros criados manualmente permanecem no banco; não há exclusão pela interface nesta etapa.
 
 ## API de equipamentos
 
@@ -182,6 +206,10 @@ npm.cmd run test:integration
 npm.cmd run build
 ```
 
+`npm.cmd test` executa as suítes do backend e do frontend. Para executar apenas os componentes, use `npm.cmd --prefix frontend test`. O frontend usa Vitest 5, jsdom 26 e Testing Library React/DOM, somente como dependências de desenvolvimento. O jsdom 26 mantém compatibilidade com o Node mínimo do projeto. Os testes usam respostas HTTP simuladas, não dependem do MySQL e não criam dados reais.
+
+O Vitest foi configurado seguindo seu [guia oficial](https://vitest.dev/guide/); o proxy usa a [configuração oficial do Vite](https://vite.dev/config/server-options.html#server-proxy).
+
 Os testes de integração usam exclusivamente o banco de desenvolvimento `ZebraOneCare` configurado no `.env`. Exercitam cadastro, consulta, edição, reserva de patrimônio em arquivados, múltiplos `NULL` e rejeição de duplicidade pelo índice real. As transações fazem rollback ao final, sem manter equipamentos de teste nem apagar registros existentes; podem ocorrer lacunas normais nos IDs auto-incrementais. O build do backend verifica a sintaxe dos arquivos JavaScript. O frontend gera os arquivos de produção em `frontend/dist`.
 
 ## Estrutura atual
@@ -199,9 +227,15 @@ backend/
     health.test.js
 frontend/
   src/
+    components/
+    pages/
+    services/
+    utils/
     App.jsx
     index.css
     main.jsx
+  test/
+  vitest.config.js
 ```
 
 Consulte `documentacao_sistema_onecare.md` para a especificação completa e `AGENTS.md` para as regras de desenvolvimento.

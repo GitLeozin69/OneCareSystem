@@ -328,6 +328,8 @@ Por padrão, os indicadores devem considerar apenas equipamentos não arquivados
 
 Criar uma tela de listagem dos equipamentos.
 
+Na Etapa 3C, a interface apresenta os não arquivados, inclusive contratos vencidos, com pesquisa, ordenação, paginação, cadastro e edição integrados à API. Os campos opcionais sem valor aparecem como “—”. As datas são exibidas em `DD/MM/AAAA`, mantendo `AAAA-MM-DD` na comunicação com o backend. Status e indicadores de vencimento permanecem reservados à Etapa 4.
+
 Além da listagem principal, criar uma visualização ou filtro específico chamado `Vencidos`, contendo os equipamentos cujo OneCare já terminou.
 
 A tabela deve permitir visualizar, no mínimo:
@@ -421,6 +423,8 @@ Data de término
 ```
 
 O mesmo formulário pode ser reutilizado para edição.
+
+Na interface da Etapa 3C, o formulário inclui também a última conferência opcional. Serial, part number, cliente e as duas datas de cobertura são obrigatórios. Campos opcionais limpos são enviados como `null`. O formulário mantém os dados digitados em caso de erro, apresenta mensagens próximas aos campos e bloqueia envios repetidos durante o salvamento. Ao salvar ou cancelar, pesquisa e ordenação da listagem são preservadas. O histórico continua sob responsabilidade do backend.
 
 Antes de salvar:
 - Validar campos obrigatórios.
@@ -1009,6 +1013,14 @@ Criar:
 - paginação e ordenação;
 - arquivamento e restauração;
 - importação por Excel.
+
+Subdivisão da Etapa 3, sem alterar a numeração das demais etapas:
+
+- 3A: API e regras básicas de equipamentos;
+- 3B: listagem, pesquisa, paginação e ordenação na API;
+- 3C: frontend integrado para listagem, cadastro e edição;
+- 3D: arquivados e consulta visual do histórico;
+- 3E: importação por Excel.
 
 ### Etapa 4 — Status
 Implementar:
