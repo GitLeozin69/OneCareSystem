@@ -24,7 +24,8 @@ export class ApiError extends Error {
 
 const editableFields = new Set([
   'serialNumber', 'partNumber', 'cliente', 'patrimonio', 'contratoOnecare',
-  'dataInicioOnecare', 'dataFimOnecare', 'dataUltimaConferencia',
+  'notaFiscal', 'distribuidor', 'dataInicioOnecare', 'dataFimOnecare',
+  'dataUltimaConferencia',
 ])
 
 async function request(path, { signal, method = 'GET', body } = {}) {

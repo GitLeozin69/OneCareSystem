@@ -5,6 +5,8 @@ const fields = {
   partNumber: { type: 'string', required: true, maxLength: 100 },
   cliente: { type: 'string', required: true, maxLength: 255 },
   patrimonio: { type: 'optionalString', maxLength: 100 },
+  notaFiscal: { type: 'optionalString', maxLength: 100 },
+  distribuidor: { type: 'string', required: true, maxLength: 255 },
   contratoOnecare: { type: 'optionalString', maxLength: 100 },
   dataInicioOnecare: { type: 'date', required: true },
   dataFimOnecare: { type: 'date', required: true },

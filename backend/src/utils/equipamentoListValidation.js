@@ -4,6 +4,8 @@ export const EQUIPAMENTO_SORT_FIELDS = [
   'serialNumber',
   'partNumber',
   'patrimonio',
+  'notaFiscal',
+  'distribuidor',
   'cliente',
   'contratoOnecare',
   'dataInicioOnecare',

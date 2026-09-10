@@ -2,7 +2,7 @@
 
 Sistema web para controle de equipamentos vinculados a contratos OneCare.
 
-O projeto está na Etapa 3D: API e interface de equipamentos com listagem, pesquisa, paginação, ordenação, cadastro, edição, arquivamento, restauração e consulta do histórico de contratos. Importação, status, dashboard e notificações ainda não estão implementados.
+O projeto está no checkpoint 3D.1: API e interface de equipamentos com listagem, pesquisa, paginação, ordenação, cadastro, edição, arquivamento, restauração, histórico de contratos, nota fiscal e distribuidor. Importação, status, dashboard e notificações ainda não estão implementados.
 
 ## Tecnologias
 
@@ -106,7 +106,9 @@ O proxy também está configurado no `npm.cmd --prefix frontend run preview`. Pa
 
 A página lista todos os equipamentos não arquivados, inclusive com contratos já vencidos. A pesquisa é enviada por “Pesquisar” ou Enter e pode ser limpa. Pesquisa, limite e ordenação voltam à primeira página quando alterados; os filtros são preservados ao sair do formulário. Requisições substituídas são canceladas e respostas antigas são ignoradas.
 
-“Novo equipamento” abre o cadastro; “Editar” carrega o equipamento pela API. São obrigatórios serial, part number, cliente, início e término do OneCare. Patrimônio, número do contrato e última conferência são opcionais; limpar um valor envia `null`. O serial é normalizado para maiúsculas. Somente campos editáveis são enviados e a API continua responsável pela unicidade e pelo histórico.
+“Novo equipamento” abre o cadastro; “Editar” carrega o equipamento pela API. São obrigatórios serial, part number, cliente, distribuidor, início e término do OneCare. Patrimônio, nota fiscal, número do contrato e última conferência são opcionais; limpar um valor envia `null`. O serial é normalizado para maiúsculas. Somente campos editáveis são enviados e a API continua responsável pela unicidade e pelo histórico.
+
+`distribuidor` recebe `trim`, preserva maiúsculas e minúsculas e admite até 255 caracteres. Não pode ser apagado na edição e pode se repetir entre equipamentos. `notaFiscal` também preserva a forma digitada após `trim`, admite até 100 caracteres, pode se repetir e é convertida para `null` quando ausente ou vazia. Os dois campos aparecem nas listagens ativa e de arquivados e podem ser usados na pesquisa e na ordenação. Eles não integram o histórico de contratos.
 
 As datas da tabela são exibidas em `DD/MM/AAAA`. Os formulários usam controles nativos de data (a aparência depende do idioma do navegador), enviando `AAAA-MM-DD`, sem conversão de fuso. A interface apresenta carregamento, resultados vazios, erros com nova tentativa, conflitos próximos aos campos e confirmação de salvamento. Durante o envio, os controles são desabilitados.
 
@@ -150,7 +152,9 @@ O cadastro utiliza propriedades em `camelCase`:
   "serialNumber": "SN123456",
   "partNumber": "PN001",
   "cliente": "Cliente Exemplo",
+  "distribuidor": "Distribuidor Exemplo",
   "patrimonio": "PAT001",
+  "notaFiscal": "NF001",
   "contratoOnecare": "OC001",
   "dataInicioOnecare": "2026-01-01",
   "dataFimOnecare": "2026-12-31",
@@ -158,23 +162,25 @@ O cadastro utiliza propriedades em `camelCase`:
 }
 ```
 
-As datas da API utilizam `AAAA-MM-DD`. `patrimonio`, `contratoOnecare` e `dataUltimaConferencia` são opcionais. A remoção é lógica e equipamentos arquivados não são retornados por `GET /equipamentos/:id`.
+As datas da API utilizam `AAAA-MM-DD`. `distribuidor` é obrigatório. `patrimonio`, `notaFiscal`, `contratoOnecare` e `dataUltimaConferencia` são opcionais. A remoção é lógica e equipamentos arquivados não são retornados por `GET /equipamentos/:id`.
 
 O patrimônio informado recebe `trim` e deve ser único globalmente, inclusive entre equipamentos arquivados. Valor vazio ou somente espaços vira `null`; vários equipamentos podem ficar sem patrimônio. O formato é preservado. Duplicidade no cadastro ou na edição retorna `409`, código `PATRIMONIO_DUPLICADO` e mensagem `Já existe um equipamento com esse patrimônio.`. A edição permite manter o próprio patrimônio. A futura importação por Excel deverá rejeitar patrimônios duplicados no sistema ou em outra linha válida da planilha.
 
 A migration `20260908172841_unique_patrimonio` adiciona somente o índice `uq_equipamentos_patrimonio`. Antes de aplicá-la a uma base com dados, verifique duplicidades e resolva-as com autorização do responsável; a migration não apaga nem ajusta registros.
 
+A migration `20260910120000_add_nota_fiscal_distribuidor` adiciona `nota_fiscal` opcional e `distribuidor` obrigatório, sem índices únicos nem valor padrão permanente. Para preservar registros anteriores, ela cria temporariamente `distribuidor` como anulável, preenche somente valores ausentes com `NÃO INFORMADO` e então aplica `NOT NULL`. Novos cadastros precisam informar o distribuidor explicitamente.
+
 ### Listagem, pesquisa, paginação e ordenação
 
 `GET /equipamentos` retorna somente equipamentos não arquivados. Os parâmetros são opcionais:
 
-- `q`: pesquisa parcial em `serialNumber`, `partNumber`, `patrimonio`, `cliente` e `contratoOnecare`; espaços nas extremidades são ignorados;
+- `q`: pesquisa parcial em `serialNumber`, `partNumber`, `patrimonio`, `notaFiscal`, `distribuidor`, `cliente` e `contratoOnecare`; espaços nas extremidades são ignorados;
 - `page`: página atual, padrão `1`;
 - `limit`: itens por página, padrão `20` e máximo `100`;
 - `sortBy`: campo de ordenação, padrão `createdAt`;
 - `order`: direção `asc` ou `desc`, padrão `desc`.
 
-Os campos aceitos em `sortBy` são `serialNumber`, `partNumber`, `patrimonio`, `cliente`, `contratoOnecare`, `dataInicioOnecare`, `dataFimOnecare`, `createdAt` e `updatedAt`.
+Os campos aceitos em `sortBy` são `serialNumber`, `partNumber`, `patrimonio`, `notaFiscal`, `distribuidor`, `cliente`, `contratoOnecare`, `dataInicioOnecare`, `dataFimOnecare`, `createdAt` e `updatedAt`.
 
 Empates são resolvidos pelo ID, na mesma direção. `q` vazio ou somente com espaços não aplica pesquisa. Parâmetros inválidos, desconhecidos ou repetidos retornam `400 PARAMETRO_INVALIDO`, com mensagem e detalhes do campo. `page` deve ser um inteiro positivo representável com segurança em JavaScript; páginas além dos resultados retornam uma lista vazia.
 
@@ -252,7 +258,39 @@ npm.cmd run build
 
 O Vitest foi configurado seguindo seu [guia oficial](https://vitest.dev/guide/); o proxy usa a [configuração oficial do Vite](https://vite.dev/config/server-options.html#server-proxy).
 
-Os testes de integração usam exclusivamente o banco de desenvolvimento `ZebraOneCare` configurado no `.env`. Exercitam cadastro, consulta, edição, histórico, arquivamento, listagem de arquivados, restauração, reserva de patrimônio em arquivados, múltiplos `NULL` e rejeição de duplicidade pelo índice real. As transações fazem rollback ao final, sem manter equipamentos de teste nem apagar registros existentes; podem ocorrer lacunas normais nos IDs auto-incrementais. O build do backend verifica a sintaxe dos arquivos JavaScript. O frontend gera os arquivos de produção em `frontend/dist`.
+Os testes de integração usam exclusivamente o banco de desenvolvimento `ZebraOneCare` configurado no `.env`. Exercitam cadastro, consulta, edição, histórico, arquivamento, listagem de arquivados, restauração, nota fiscal e distribuidor repetíveis, reserva de patrimônio em arquivados, múltiplos `NULL` e rejeição de duplicidade pelo índice real. As transações fazem rollback ao final, sem manter equipamentos de teste nem apagar registros existentes; podem ocorrer lacunas normais nos IDs auto-incrementais. O build do backend verifica a sintaxe dos arquivos JavaScript. O frontend gera os arquivos de produção em `frontend/dist`.
+
+### Dependências e auditoria — checkpoint 3D.1
+
+Diagnóstico online em 10/09/2026: `npm.cmd --prefix backend audit` e a variante `--omit=dev` apontaram 6 pacotes afetados (1 moderado e 5 altos). `npm explain` confirmou as cadeias abaixo; as versões dos filhos estavam fixadas exatamente pelos respectivos pais.
+
+| Dependência | Pacote pai e restrição original | Instalada antes | Mínima corrigida | Versão adotada |
+|---|---|---|---|---|
+| `mariadb` | `@prisma/adapter-mariadb@7.10.0` → `3.4.5` | 3.4.5 | 3.4.6 na linha 3.4 | 3.4.7 |
+| `mysql2` | `prisma@7.10.0` → `3.15.3` | 3.15.3 | 3.23.1 para todos os avisos detectados | 3.23.1 |
+| `deepmerge-ts` | `prisma@7.10.0` → `@prisma/config@7.10.0` → `7.1.5` | 7.1.5 | 8.0.0 | 8.0.0 |
+
+Referências das correções: [MariaDB](https://github.com/advisories/GHSA-cqhc-2h57-wpxf), [mysql2](https://github.com/advisories/GHSA-rgwj-5xj2-c3m3) e [deepmerge-ts](https://github.com/advisories/GHSA-ggr8-5vv4-36mx). A versão MariaDB 3.4.6 indicada pelo aviso não estava disponível no registro npm consultado; 3.4.7 estava disponível na mesma linha de manutenção.
+
+`mariadb` é usado pelo adaptador em execução. Embora `prisma` esteja declarado em `devDependencies`, ele também é um peer opcional de `@prisma/client`; nesta árvore, `mysql2` e `deepmerge-ts` permanecem incluídos na auditoria de produção. Não são classificados como exclusivamente de desenvolvimento. A conexão da API utiliza `mariadb`, não `mysql2`.
+
+`npm outdated` e a consulta às versões publicadas da linha 7 confirmaram 7.10.0 como a versão estável mais recente disponível nessa linha. O `latest` de `prisma` apontava para 8.0.0-rc.13, que não foi adotado. Prisma Client, CLI e adaptador permaneceram alinhados em 7.10.0, sem downgrade.
+
+Os `overrides` em `backend/package.json` substituem apenas `mariadb` sob o adaptador, `mysql2` sob o Prisma e `deepmerge-ts` sob `@prisma/config@7.10.0`. Os dois primeiros corrigem drivers transitivos fixados pelos pais; o terceiro foi necessário porque não havia atualização oficial corrigida do pai na linha 7. A compatibilidade do major 8 de `deepmerge-ts` foi verificada pelo carregamento da configuração, validate, generate, migrate status e pelos testes com MySQL real. Revise esses overrides quando atualizar o Prisma; remova-os somente quando os pais adotarem versões corrigidas e as verificações passarem.
+
+Verificações finais desse checkpoint: auditorias completas de backend e frontend e auditoria de produção do backend com **zero vulnerabilidades reportadas**; 118 testes de backend e 37 de frontend aprovados. Os 4 testes dependentes do banco, pulados na suíte comum, passaram na execução de integração (5 testes aprovados ao todo). Lint, build, geração do Client, validação do schema e estado das 3 migrations também passaram. POST e GET foram exercitados via Fastify `inject` com MySQL real em transações revertidas, sem persistir equipamentos de teste. Nenhuma migration foi reaplicada durante a correção das dependências.
+
+Para repetir as auditorias, com acesso ao registro npm:
+
+```powershell
+npm.cmd --prefix backend audit
+npm.cmd --prefix backend audit --omit=dev
+npm.cmd --prefix frontend audit
+```
+
+Auditoria sem acesso à rede/cache confiável não comprova ausência de vulnerabilidades. Não use `npm audit fix --force` para contornar os avisos: no diagnóstico, ele sugeria downgrade incompatível para Prisma 6.
+
+A instalação apresentou um aviso `allow-scripts` sobre scripts de `prisma` e `@prisma/engines` sem aprovação cadastrada no npm. A política não foi alterada nem o aviso suprimido; os comandos explícitos de geração e verificação do Prisma funcionaram neste ambiente. Uma instalação nova deve revisar esses scripts se necessário. Falhas iniciais `EPERM` do sandbox foram resolvidas repetindo as verificações com autorização fora dele.
 
 ## Estrutura atual
 

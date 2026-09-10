@@ -52,11 +52,13 @@ test('arquivamento lógico move equipamento da lista ativa para arquivados', asy
   assert.deepEqual(inactive.json().data.map((item) => item.id), [1])
 })
 
-test('listagem de arquivados pesquisa os cinco campos e ignora ativos', async (context) => {
+test('listagem de arquivados pesquisa todos os campos textuais e ignora ativos', async (context) => {
   const cases = [
     ['serialNumber', 'ZX900'],
     ['partNumber', 'PN-900'],
     ['patrimonio', 'PAT-900'],
+    ['notaFiscal', 'NF-900'],
+    ['distribuidor', 'Distribuidor 900'],
     ['cliente', 'Cliente 900'],
     ['contratoOnecare', 'OC-900'],
   ]
@@ -65,7 +67,12 @@ test('listagem de arquivados pesquisa os cinco campos e ignora ativos', async (c
     const { app } = setup(context, [
       equipamento(1, { arquivado: true, [field]: value }),
       equipamento(2, { arquivado: false, [field]: value }),
-      equipamento(3, { arquivado: true, patrimonio: null, contratoOnecare: null }),
+      equipamento(3, {
+        arquivado: true,
+        patrimonio: null,
+        notaFiscal: null,
+        contratoOnecare: null,
+      }),
     ])
     const response = await app.inject({
       method: 'GET',

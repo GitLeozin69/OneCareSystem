@@ -8,7 +8,9 @@ const activeItem = {
   serialNumber: 'SN001',
   partNumber: 'PN001',
   cliente: 'Cliente Teste',
+  distribuidor: 'Distribuidor Teste',
   patrimonio: null,
+  notaFiscal: null,
   contratoOnecare: 'OC2',
   dataInicioOnecare: '2026-01-01',
   dataFimOnecare: '2027-12-31',
@@ -195,7 +197,8 @@ describe('Listagem de arquivados', () => {
   it('renderiza dados, opcionais e data de arquivamento', async () => {
     await openArchived()
     expect(screen.getByRole('heading', { name: 'Equipamentos arquivados' })).toBeTruthy()
-    expect(screen.getAllByText('—')).toHaveLength(1)
+    expect(screen.getByText('Distribuidor Teste')).toBeTruthy()
+    expect(screen.getAllByText('—')).toHaveLength(2)
     expect(screen.getByText('08/09/2026 às 09:30')).toBeTruthy()
     click('← Voltar aos equipamentos')
     await readyActive()
@@ -218,6 +221,10 @@ describe('Listagem de arquivados', () => {
     })
     input('Ordenar por', 'serialNumber')
     await waitFor(() => expect(fetchMock.mock.calls.at(-1)[0]).toContain('sortBy=serialNumber'))
+    input('Ordenar por', 'notaFiscal')
+    await waitFor(() => expect(fetchMock.mock.calls.at(-1)[0]).toContain('sortBy=notaFiscal'))
+    input('Ordenar por', 'distribuidor')
+    await waitFor(() => expect(fetchMock.mock.calls.at(-1)[0]).toContain('sortBy=distribuidor'))
     input('Direção', 'asc')
     await waitFor(() => expect(fetchMock.mock.calls.at(-1)[0]).toContain('order=asc'))
     click('Próxima →')

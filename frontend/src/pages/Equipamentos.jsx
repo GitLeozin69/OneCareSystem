@@ -11,7 +11,8 @@ const defaultQuery = {
 const sortOptions = [
   ['createdAt', 'Data de cadastro'], ['updatedAt', 'Última atualização'],
   ['serialNumber', 'Serial'], ['partNumber', 'Part number'], ['cliente', 'Cliente'],
-  ['patrimonio', 'Patrimônio'], ['contratoOnecare', 'Contrato OneCare'],
+  ['distribuidor', 'Distribuidor'], ['patrimonio', 'Patrimônio'],
+  ['notaFiscal', 'Nota fiscal'], ['contratoOnecare', 'Contrato OneCare'],
   ['dataInicioOnecare', 'Início do OneCare'], ['dataFimOnecare', 'Término do OneCare'],
 ]
 
@@ -186,7 +187,7 @@ export default function Equipamentos() {
                 id="search"
                 type="search"
                 className="input"
-                placeholder="Serial, part number, cliente, patrimônio ou contrato"
+                placeholder="Serial, part number, cliente, distribuidor, patrimônio, nota fiscal ou contrato"
                 value={search}
                 onChange={(event) => setSearches((previous) => ({
                   ...previous, [mode]: event.target.value,

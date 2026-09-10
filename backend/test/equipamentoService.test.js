@@ -12,6 +12,7 @@ function validPayload(overrides = {}) {
     serialNumber: 'sn001',
     partNumber: ' PN001 ',
     cliente: ' Cliente Teste ',
+    distribuidor: ' Distribuidor Teste ',
     dataInicioOnecare: '2026-01-01',
     dataFimOnecare: '2026-12-31',
     ...overrides,

@@ -7,6 +7,8 @@ export function createEquipamentoRecord(overrides = {}) {
     partNumber: 'PN001',
     cliente: 'Cliente Teste',
     patrimonio: null,
+    notaFiscal: null,
+    distribuidor: 'Distribuidor Teste',
     contratoOnecare: null,
     dataInicioOnecare: new Date('2026-01-01T00:00:00.000Z'),
     dataFimOnecare: new Date('2026-12-31T00:00:00.000Z'),

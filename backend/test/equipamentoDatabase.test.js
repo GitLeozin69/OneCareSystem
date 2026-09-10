@@ -55,6 +55,7 @@ test(
               serialNumber,
               partNumber: 'REGRESSION',
               cliente: 'Teste de regressão',
+              distribuidor: 'Distribuidor Teste',
               dataInicioOnecare: '2026-01-01',
               dataFimOnecare: '2026-12-31',
             },

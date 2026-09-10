@@ -5,7 +5,8 @@ import { formatDate, prepareEquipment, toFormValues } from '../src/utils/equipam
 
 const item = {
   id: 1, serialNumber: 'SN001', partNumber: 'PN / 01', cliente: 'Cliente Teste',
-  patrimonio: 'PAT-01', contratoOnecare: 'OC / 01', dataInicioOnecare: '2025-01-01',
+  distribuidor: 'Distribuidor Teste', patrimonio: 'PAT-01', notaFiscal: 'NF-001',
+  contratoOnecare: 'OC / 01', dataInicioOnecare: '2025-01-01',
   dataFimOnecare: '2025-12-31', dataUltimaConferencia: '2025-09-01',
   createdAt: '2025-01-01T12:00:00Z', updatedAt: '2025-01-01T12:00:00Z', arquivado: false,
 }
@@ -40,6 +41,7 @@ function fillRequired() {
   input('Número de série *', 'ab123')
   input('Part number *', ' PN / 01 ')
   input('Cliente *', ' Cliente Teste ')
+  input('Distribuidor *', ' Distribuidor Teste ')
   input('Início do OneCare *', '2026-01-01')
   input('Término do OneCare *', '2026-12-31')
 }
@@ -51,6 +53,8 @@ describe('Listagem integrada', () => {
     await ready()
     expect(screen.getByText('31/12/2025')).toBeTruthy()
     expect(screen.getByText('Cliente Teste')).toBeTruthy()
+    expect(screen.getByText('Distribuidor Teste')).toBeTruthy()
+    expect(screen.getByText('NF-001')).toBeTruthy()
     expect(Object.fromEntries(lastParams())).toEqual({ page: '1', limit: '20', sortBy: 'createdAt', order: 'desc' })
   })
 
@@ -69,10 +73,12 @@ describe('Listagem integrada', () => {
   })
 
   it('mostra traço nos opcionais ausentes', async () => {
-    fetchMock.mockResolvedValue(json(list([{ ...item, patrimonio: null, contratoOnecare: null }])))
+    fetchMock.mockResolvedValue(json(list([{
+      ...item, patrimonio: null, notaFiscal: null, contratoOnecare: null,
+    }])))
     render(<App />)
     await ready()
-    expect(screen.getAllByText('—')).toHaveLength(2)
+    expect(screen.getAllByText('—')).toHaveLength(3)
   })
 
   it('permite tentar novamente após erro de rede', async () => {
@@ -104,6 +110,18 @@ describe('Listagem integrada', () => {
     expect(lastParams().get('page')).toBe('1')
   })
 
+  it('pesquisa e oferece ordenação por nota fiscal e distribuidor', async () => {
+    render(<App />)
+    await ready()
+    input('Pesquisar equipamentos', '  NF-001  ')
+    click('Pesquisar')
+    await waitFor(() => expect(lastParams().get('q')).toBe('NF-001'))
+    input('Ordenar por', 'notaFiscal')
+    await waitFor(() => expect(lastParams().get('sortBy')).toBe('notaFiscal'))
+    input('Ordenar por', 'distribuidor')
+    await waitFor(() => expect(lastParams().get('sortBy')).toBe('distribuidor'))
+  })
+
   it('não permite que resposta antiga substitua a pesquisa mais recente', async () => {
     let resolveOld
     fetchMock.mockReturnValueOnce(new Promise((resolve) => { resolveOld = resolve }))
@@ -129,10 +147,25 @@ describe('Cadastro e edição', () => {
     expect(writes()[0][0]).toBe('/api/equipamentos')
     expect(JSON.parse(writes()[0][1].body)).toEqual({
       serialNumber: 'AB123', partNumber: 'PN / 01', cliente: 'Cliente Teste',
-      patrimonio: null, contratoOnecare: null, dataInicioOnecare: '2026-01-01',
+      distribuidor: 'Distribuidor Teste', patrimonio: null, notaFiscal: null,
+      contratoOnecare: null, dataInicioOnecare: '2026-01-01',
       dataFimOnecare: '2026-12-31', dataUltimaConferencia: null,
     })
     expect(fetchMock.mock.calls.filter(([url]) => url.includes('?'))).toHaveLength(2)
+  })
+
+  it('renderiza os novos campos e envia valores normalizados no cadastro', async () => {
+    await newForm()
+    expect(screen.getByLabelText('Distribuidor *').required).toBe(true)
+    expect(screen.getByLabelText('Nota fiscal (opcional)').required).toBe(false)
+    fillRequired()
+    input('Distribuidor *', '  Distribuidor Misto Ltda.  ')
+    input('Nota fiscal (opcional)', '  Nf / 2026-a  ')
+    click('Salvar equipamento')
+    await screen.findByText('Equipamento cadastrado com sucesso.')
+    const payload = JSON.parse(writes()[0][1].body)
+    expect(payload.distribuidor).toBe('Distribuidor Misto Ltda.')
+    expect(payload.notaFiscal).toBe('Nf / 2026-a')
   })
 
   it('carrega edição por ID, limpa opcionais e preserva pesquisa/ordenação', async () => {
@@ -145,9 +178,13 @@ describe('Cadastro e edição', () => {
     await ready()
     click('Editar SN001')
     await waitFor(() => expect(screen.getByLabelText('Cliente *').value).toBe(item.cliente))
+    expect(screen.getByLabelText('Distribuidor *').value).toBe('Distribuidor Teste')
+    expect(screen.getByLabelText('Nota fiscal (opcional)').value).toBe('NF-001')
     expect(fetchMock.mock.calls.some(([url]) => url === '/api/equipamentos/1')).toBe(true)
     input('Cliente *', 'Cliente Atualizado')
+    input('Distribuidor *', '  Distribuidor Atualizado  ')
     input('Patrimônio (opcional)', '  ')
+    input('Nota fiscal (opcional)', '  ')
     input('Contrato OneCare (opcional)', '')
     input('Última conferência (opcional)', '')
     click('Salvar equipamento')
@@ -157,8 +194,8 @@ describe('Cadastro e edição', () => {
     expect(url).toBe('/api/equipamentos/1')
     expect(options.method).toBe('PATCH')
     const payload = JSON.parse(options.body)
-    expect(payload).toMatchObject({ cliente: 'Cliente Atualizado', patrimonio: null, contratoOnecare: null, dataUltimaConferencia: null, dataInicioOnecare: '2025-01-01' })
-    expect(Object.keys(payload)).toHaveLength(8)
+    expect(payload).toMatchObject({ cliente: 'Cliente Atualizado', distribuidor: 'Distribuidor Atualizado', patrimonio: null, notaFiscal: null, contratoOnecare: null, dataUltimaConferencia: null, dataInicioOnecare: '2025-01-01' })
+    expect(Object.keys(payload)).toHaveLength(10)
     expect(lastParams().get('q')).toBe('Teste')
     expect(lastParams().get('sortBy')).toBe('cliente')
   })
@@ -166,7 +203,8 @@ describe('Cadastro e edição', () => {
   it('valida campos obrigatórios, serial e intervalo sem enviar requisição', async () => {
     await newForm()
     click('Salvar equipamento')
-    expect(screen.getAllByText('Este campo é obrigatório.')).toHaveLength(5)
+    expect(screen.getAllByText('Este campo é obrigatório.')).toHaveLength(6)
+    expect(screen.getByLabelText('Distribuidor *').getAttribute('aria-invalid')).toBe('true')
     fillRequired()
     input('Número de série *', 'ab-123')
     input('Término do OneCare *', '2025-01-01')
@@ -180,15 +218,21 @@ describe('Cadastro e edição', () => {
     ['SERIAL_DUPLICADO', 'Número de série *', 'Já existe um equipamento com esse número de série.'],
     ['PATRIMONIO_DUPLICADO', 'Patrimônio (opcional)', 'Já existe um equipamento com esse patrimônio.'],
     ['DATA_INVALIDA', 'Início do OneCare *', 'Informe uma data válida.'],
+    ['CAMPO_OBRIGATORIO', 'Distribuidor *', 'Preencha os campos obrigatórios.'],
   ])('mostra erro %s no campo e mantém dados digitados', async (code, label, message) => {
     await newForm()
     fillRequired()
-    fetchMock.mockResolvedValueOnce(json({ error: code, details: code === 'DATA_INVALIDA' ? [{ field: 'dataInicioOnecare' }] : [] }, code === 'DATA_INVALIDA' ? 422 : 409))
+    const details = code === 'DATA_INVALIDA'
+      ? [{ field: 'dataInicioOnecare' }]
+      : code === 'CAMPO_OBRIGATORIO' ? [{ field: 'distribuidor' }] : []
+    const status = code === 'DATA_INVALIDA' ? 422 : code === 'CAMPO_OBRIGATORIO' ? 400 : 409
+    fetchMock.mockResolvedValueOnce(json({ error: code, details }, status))
     click('Salvar equipamento')
     await screen.findByRole('alert')
     expect(screen.getByLabelText(label).getAttribute('aria-invalid')).toBe('true')
     expect(screen.getAllByText(message).length).toBeGreaterThan(0)
     expect(screen.getByLabelText('Cliente *').value).toBe(' Cliente Teste ')
+    expect(screen.getByLabelText('Distribuidor *').value).toBe(' Distribuidor Teste ')
   })
 
   it('bloqueia clique e submit repetidos durante salvamento', async () => {

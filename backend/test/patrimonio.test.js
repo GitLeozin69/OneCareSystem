@@ -16,6 +16,7 @@ function payload(serialNumber, patrimonio) {
     serialNumber,
     patrimonio,
     cliente: 'Teste',
+    distribuidor: 'Distribuidor Teste',
     partNumber: 'PN01',
     dataInicioOnecare: '2026-01-01',
     dataFimOnecare: '2026-12-31',

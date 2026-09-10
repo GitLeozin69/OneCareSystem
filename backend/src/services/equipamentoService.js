@@ -54,6 +54,8 @@ async function listEquipamentos(prisma, query, arquivado) {
       { serialNumber: { contains: normalized.q } },
       { partNumber: { contains: normalized.q } },
       { patrimonio: { contains: normalized.q } },
+      { notaFiscal: { contains: normalized.q } },
+      { distribuidor: { contains: normalized.q } },
       { cliente: { contains: normalized.q } },
       { contratoOnecare: { contains: normalized.q } },
     ]

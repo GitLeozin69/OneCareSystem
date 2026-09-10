@@ -12,6 +12,8 @@ model Equipamento {
   partNumber            String              @map("part_number") @db.VarChar(100)
   cliente               String              @db.VarChar(255)
   patrimonio            String?             @unique(map: "uq_equipamentos_patrimonio") @db.VarChar(100)
+  notaFiscal            String?             @map("nota_fiscal") @db.VarChar(100)
+  distribuidor          String              @db.VarChar(255)
   contratoOnecare       String?             @map("contrato_onecare") @db.VarChar(100)
   dataInicioOnecare     DateTime            @map("data_inicio_onecare") @db.Date
   dataFimOnecare        DateTime            @map("data_fim_onecare") @db.Date

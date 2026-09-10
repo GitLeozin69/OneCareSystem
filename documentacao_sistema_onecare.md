@@ -16,7 +16,7 @@ O sistema deverá permitir:
 2. Alterar informações dos equipamentos.
 3. Excluir equipamentos.
 4. Consultar equipamentos.
-5. Pesquisar por número de série, part number, cliente, patrimônio e contrato.
+5. Pesquisar por número de série, part number, cliente, patrimônio, nota fiscal, distribuidor e contrato.
 6. Controlar início e término do contrato OneCare.
 7. Exibir quanto tempo falta para o vencimento.
 8. Identificar contratos vencidos.
@@ -102,6 +102,8 @@ Cada equipamento deverá possuir, no mínimo:
 | Part Number | Modelo/código do fabricante | Sim |
 | Cliente | Cliente ao qual o equipamento está vinculado | Sim |
 | Patrimônio | Número de patrimônio do cliente | Não |
+| Nota fiscal | Identificação textual da nota fiscal | Não |
+| Distribuidor | Distribuidor responsável pelo equipamento | Sim |
 | Contrato OneCare | Número do contrato | Não |
 | Data de início OneCare | Início da cobertura | Sim |
 | Data de término OneCare | Final da cobertura | Sim |
@@ -114,6 +116,9 @@ Cada equipamento deverá possuir, no mínimo:
 ### Regras
 - O número de série deve ser único.
 - O patrimônio é opcional; quando informado, deve ser único globalmente, inclusive entre equipamentos arquivados. Aplicar `trim` e converter texto vazio ou somente espaços para `null`. Vários equipamentos podem ter patrimônio `null`; não há nova restrição de formato.
+- A nota fiscal é opcional, não é única, admite até 100 caracteres, recebe `trim` e é convertida para `null` quando ausente, vazia ou somente com espaços.
+- O distribuidor é obrigatório, não é único, admite até 255 caracteres, recebe `trim` e não aceita valor ausente, `null`, vazio ou somente com espaços.
+- Nota fiscal e distribuidor preservam maiúsculas e minúsculas informadas pelo usuário após a remoção dos espaços externos.
 - O número de série deve ser normalizado para maiúsculas e aceitar somente letras de `A` a `Z` e números de `0` a `9`, sem espaços ou caracteres especiais.
 - O número do contrato OneCare é opcional tanto no cadastro manual quanto na importação.
 - A data de término não pode ser anterior à data de início.
@@ -334,13 +339,17 @@ Na Etapa 3D, a listagem operacional permite arquivar com confirmação explícit
 
 O histórico de contratos pode ser aberto na listagem ou na edição e funciona para equipamentos ativos e arquivados. Cada evento identifica explicitamente os valores anterior e novo, do mais recente para o mais antigo. Datas contratuais são exibidas em `DD/MM/AAAA` e o instante da substituição no fuso `America/Fortaleza`.
 
+No checkpoint 3D.1, nota fiscal e distribuidor passam a integrar cadastro, edição, consulta e listagens ativa e de arquivados. Esses campos não fazem parte do histórico contratual. A tabela permanece responsiva por meio de rolagem horizontal.
+
 Além da listagem principal, criar uma visualização ou filtro específico chamado `Vencidos`, contendo os equipamentos cujo OneCare já terminou.
 
 A tabela deve permitir visualizar, no mínimo:
 - Número de série
 - Part Number
 - Cliente
+- Distribuidor
 - Patrimônio
+- Nota fiscal
 - Contrato OneCare
 - Data de início
 - Data de término
@@ -372,13 +381,15 @@ Os parâmetros são opcionais:
 - `sortBy`: campo de ordenação, padrão `createdAt`;
 - `order`: direção da ordenação, padrão `desc`.
 
-A pesquisa por `q` remove espaços das extremidades e consulta os campos `serialNumber`, `partNumber`, `patrimonio`, `cliente` e `contratoOnecare`. Valor vazio ou contendo somente espaços equivale a não informar a pesquisa.
+A pesquisa por `q` remove espaços das extremidades e consulta os campos `serialNumber`, `partNumber`, `patrimonio`, `notaFiscal`, `distribuidor`, `cliente` e `contratoOnecare`. Valor vazio ou contendo somente espaços equivale a não informar a pesquisa.
 
 Os campos permitidos em `sortBy` são:
 
 - `serialNumber`;
 - `partNumber`;
 - `patrimonio`;
+- `notaFiscal`;
+- `distribuidor`;
 - `cliente`;
 - `contratoOnecare`;
 - `dataInicioOnecare`;
@@ -422,7 +433,9 @@ Campos:
 Número de Série
 Part Number
 Cliente
+Distribuidor
 Patrimônio
+Nota fiscal
 Contrato OneCare
 Data de início
 Data de término
@@ -430,7 +443,7 @@ Data de término
 
 O mesmo formulário pode ser reutilizado para edição.
 
-Na interface da Etapa 3C, o formulário inclui também a última conferência opcional. Serial, part number, cliente e as duas datas de cobertura são obrigatórios. Campos opcionais limpos são enviados como `null`. O formulário mantém os dados digitados em caso de erro, apresenta mensagens próximas aos campos e bloqueia envios repetidos durante o salvamento. Ao salvar ou cancelar, pesquisa e ordenação da listagem são preservadas. Na Etapa 3D, a edição também oferece acesso somente para leitura ao histórico mantido pelo backend.
+Na interface, o formulário inclui também a última conferência opcional. Serial, part number, cliente, distribuidor e as duas datas de cobertura são obrigatórios. Patrimônio, nota fiscal, contrato e última conferência são opcionais; campos opcionais limpos são enviados como `null`. O formulário mantém os dados digitados em caso de erro, apresenta mensagens próximas aos campos e bloqueia envios repetidos durante o salvamento. Ao salvar ou cancelar, pesquisa e ordenação da listagem são preservadas. Na Etapa 3D, a edição também oferece acesso somente para leitura ao histórico mantido pelo backend.
 
 Antes de salvar:
 - Validar campos obrigatórios.
@@ -452,13 +465,17 @@ serial_number
 part_number
 cliente
 patrimonio
+nota_fiscal
+distribuidor
 contrato_onecare
 data_inicio_onecare
 data_fim_onecare
 data_ultima_conferencia
 ```
 
-`patrimonio`, `contrato_onecare` e `data_ultima_conferencia` são opcionais. As demais colunas são obrigatórias.
+`patrimonio`, `nota_fiscal`, `contrato_onecare` e `data_ultima_conferencia` são opcionais. As demais colunas, incluindo `distribuidor`, são obrigatórias.
+
+Na futura Etapa 3E, `nota_fiscal` e `distribuidor` poderão se repetir. Valores vazios de nota fiscal deverão ser convertidos para `null`; distribuidor vazio deverá ser um erro bloqueante da linha. A planilha fornecida pelo usuário ainda será analisada antes da implementação definitiva da importação.
 
 As datas da planilha devem estar no formato `DD/MM/AAAA`, sempre com quatro dígitos no ano.
 
@@ -647,6 +664,8 @@ CREATE TABLE equipamentos (
     part_number VARCHAR(100) NOT NULL,
     cliente VARCHAR(255) NOT NULL,
     patrimonio VARCHAR(100) UNIQUE,
+    nota_fiscal VARCHAR(100),
+    distribuidor VARCHAR(255) NOT NULL,
     contrato_onecare VARCHAR(100),
     data_inicio_onecare DATE NOT NULL,
     data_fim_onecare DATE NOT NULL,
@@ -712,6 +731,8 @@ model Equipamento {
   partNumber        String
   cliente           String
   patrimonio        String?  @unique(map: "uq_equipamentos_patrimonio")
+  notaFiscal        String?  @map("nota_fiscal") @db.VarChar(100)
+  distribuidor      String   @db.VarChar(255)
   contratoOnecare   String?
   dataInicioOnecare DateTime @db.Date
   dataFimOnecare    DateTime @db.Date
@@ -779,6 +800,12 @@ data_inicio_onecare <= data_fim_onecare
 O patrimônio é opcional e, quando informado, único em todo o sistema. O backend aplica `trim`, preserva o formato informado e converte texto vazio ou apenas espaços para `null`. O índice único permite múltiplos valores `NULL`. O patrimônio continua reservado ao equipamento arquivado e não pode ser reutilizado enquanto pertencer a ele.
 
 Cadastro e edição com patrimônio já utilizado retornam HTTP `409`, código `PATRIMONIO_DUPLICADO` e mensagem `Já existe um equipamento com esse patrimônio.`. Na edição, manter o mesmo patrimônio no próprio equipamento é permitido.
+
+### Nota fiscal e distribuidor
+
+`notaFiscal` é opcional, recebe `trim`, aceita `null` e transforma texto vazio em `null`. `distribuidor` é obrigatório e recebe `trim`; no `PATCH`, sua ausência preserva o valor atual, mas `null` ou texto vazio não podem apagá-lo. Ambos preservam a forma digitada, podem se repetir e participam da pesquisa e ordenação. Alterações nesses campos não criam histórico de contrato.
+
+A migration do checkpoint 3D.1 adiciona primeiro `distribuidor` como anulável, preenche somente registros anteriores sem valor com `NÃO INFORMADO` e depois aplica `NOT NULL`, sem deixar valor padrão. `nota_fiscal` permanece anulável. Nenhuma das colunas possui restrição de unicidade.
 
 ### Status
 O status deve ser calculado automaticamente.
@@ -975,6 +1002,7 @@ Priorizar inicialmente:
 - criação de equipamento;
 - tentativa de serial duplicado;
 - patrimônio único no cadastro e na edição, reserva em arquivados, múltiplos valores `null` e normalização de valores vazios;
+- nota fiscal opcional, distribuidor obrigatório, normalização, repetição, pesquisa e ordenação desses campos;
 - validação de datas;
 - cálculo de status;
 - cálculo de dias restantes;
@@ -1058,6 +1086,7 @@ Subdivisão da Etapa 3, sem alterar a numeração das demais etapas:
 - 3B: listagem, pesquisa, paginação e ordenação na API;
 - 3C: frontend integrado para listagem, cadastro e edição;
 - 3D: arquivados e consulta visual do histórico;
+- 3D.1: inclusão de nota fiscal e distribuidor nos equipamentos;
 - 3E: importação por Excel.
 
 ### Etapa 4 — Status

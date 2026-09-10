@@ -20,6 +20,7 @@ test('MySQL garante patrimônio único global, múltiplos NULL e conflitos HTTP'
     serialNumber: prefix + (++sequence),
     partNumber: 'REGRESSION',
     cliente: 'Teste transacional',
+    distribuidor: 'Distribuidor Teste',
     patrimonio: value,
     dataInicioOnecare: '2026-01-01',
     dataFimOnecare: '2026-12-31',

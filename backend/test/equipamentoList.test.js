@@ -126,6 +126,8 @@ const searchCases = [
   ['serialNumber', 'ZX901ABC', 'ZX901'],
   ['partNumber', 'PN-777-ABC', 'PN-777'],
   ['patrimonio', 'PAT-888-ABC', 'PAT-888'],
+  ['notaFiscal', 'NF-888-ABC', 'NF-888'],
+  ['distribuidor', 'Distribuidor Acme Norte', 'Acme Norte'],
   ['cliente', 'Acme Norte Filial', 'Acme Norte'],
   ['contratoOnecare', 'OC-999-ABC', 'OC-999'],
 ]
@@ -183,6 +185,8 @@ const sortableValues = {
   serialNumber: ['AA001', 'ZZ001'],
   partNumber: ['AA-PN', 'ZZ-PN'],
   patrimonio: ['AA-PAT', 'ZZ-PAT'],
+  notaFiscal: ['AA-NF', 'ZZ-NF'],
+  distribuidor: ['Alfa Distribuição', 'Zulu Distribuição'],
   cliente: ['Alfa', 'Zulu'],
   contratoOnecare: ['AA-OC', 'ZZ-OC'],
   dataInicioOnecare: [

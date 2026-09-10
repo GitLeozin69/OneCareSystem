@@ -11,7 +11,8 @@ export default function EquipamentosTable({
   onRestore,
 }) {
   const headings = [
-    'Serial', 'Part number', 'Cliente', 'Patrimônio', 'Contrato OneCare',
+    'Serial', 'Part number', 'Cliente', 'Distribuidor', 'Patrimônio',
+    'Nota fiscal', 'Contrato OneCare',
     'Início do OneCare', 'Término do OneCare',
     ...(archived ? ['Data do arquivamento'] : []),
     'Ações',
@@ -32,7 +33,9 @@ export default function EquipamentosTable({
               <th scope="row" className="px-5 py-5 font-mono text-xs font-semibold text-slate-900">{item.serialNumber}</th>
               <td className="max-w-48 break-words px-5 py-5">{item.partNumber}</td>
               <td className="min-w-44 max-w-64 break-words px-5 py-5">{item.cliente}</td>
+              <td className="min-w-44 max-w-64 break-words px-5 py-5">{item.distribuidor}</td>
               <td className="max-w-48 break-words px-5 py-5 text-slate-600">{item.patrimonio || '—'}</td>
+              <td className="max-w-48 break-words px-5 py-5 text-slate-600">{item.notaFiscal || '—'}</td>
               <td className="max-w-48 break-words px-5 py-5 text-slate-600">{item.contratoOnecare || '—'}</td>
               <td className="whitespace-nowrap px-5 py-5 tabular-nums">{formatDate(item.dataInicioOnecare)}</td>
               <td className="whitespace-nowrap px-5 py-5 tabular-nums">{formatDate(item.dataFimOnecare)}</td>
