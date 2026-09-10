@@ -140,6 +140,11 @@ function normalizeField(field, value, definition) {
   return parseDate(value, field, true)
 }
 
+// Compartilhado com a importação para reportar todos os erros por campo.
+export function normalizeEquipamentoField(field, value) {
+  return normalizeField(field, value, fields[field])
+}
+
 function normalizePayload(payload, partial) {
   if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
     throw validationError(

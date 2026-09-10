@@ -2,7 +2,7 @@
 
 Sistema web para controle de equipamentos vinculados a contratos OneCare.
 
-O projeto está no checkpoint 3D.1: API e interface de equipamentos com listagem, pesquisa, paginação, ordenação, cadastro, edição, arquivamento, restauração, histórico de contratos, nota fiscal e distribuidor. Importação, status, dashboard e notificações ainda não estão implementados.
+O projeto está na Etapa 3E: API e interface de equipamentos com listagem, pesquisa, paginação, ordenação, cadastro, edição, arquivamento, restauração, histórico de contratos, nota fiscal, distribuidor e importação Excel. Status, dashboard e notificações ainda não estão implementados.
 
 ## Tecnologias
 
@@ -291,6 +291,55 @@ npm.cmd --prefix frontend audit
 Auditoria sem acesso à rede/cache confiável não comprova ausência de vulnerabilidades. Não use `npm audit fix --force` para contornar os avisos: no diagnóstico, ele sugeria downgrade incompatível para Prisma 6.
 
 A instalação apresentou um aviso `allow-scripts` sobre scripts de `prisma` e `@prisma/engines` sem aprovação cadastrada no npm. A política não foi alterada nem o aviso suprimido; os comandos explícitos de geração e verificação do Prisma funcionaram neste ambiente. Uma instalação nova deve revisar esses scripts se necessário. Falhas iniciais `EPERM` do sandbox foram resolvidas repetindo as verificações com autorização fora dele.
+
+## Importação Excel — Etapa 3E
+
+Use “Importar Excel” na listagem ativa. Somente `.xlsx`, primeira aba, cabeçalho na primeira linha; máximo de 10 MB e 10.000 linhas após o cabeçalho. O arquivo é processado em memória e nunca armazenado no servidor. A planilha de referência não faz parte do repositório e seus dados não são usados nos testes.
+
+| Coluna Zebra | Campo |
+|---|---|
+| Contract Name | contratoOnecare (opcional) |
+| Distributor Name | distribuidor |
+| End User Name | cliente |
+| Contract Start Date | dataInicioOnecare |
+| Contract End Date | dataFimOnecare |
+| Product Family | partNumber |
+| Serial # | serialNumber |
+
+Exceto Contract Name, essas colunas e seus valores são obrigatórios. Cabeçalhos recebem trim, espaços repetidos são reduzidos a um e diferenças de caixa são ignoradas, preservando `#`. `End User  Name` também é aceito. Colunas mapeadas repetidas são rejeitadas. `Contract Status`, `Reseller Name` e `Quantity` são ignorados; outras colunas geram aviso. Quantity não multiplica equipamentos: uma linha não vazia cria um equipamento.
+
+Patrimônio, nota fiscal e última conferência são `null`. O contrato vem de cada linha, nunca do nome do arquivo. Textos recebem trim e o serial é normalizado para maiúsculas. Datas aceitam células Excel, `DD/MM/AAAA` ou `AAAA-MM-DD`, sem deslocar o dia por fuso. Datas inválidas, fórmulas nos campos importados e duplicidades bloqueiam o arquivo inteiro, inclusive seriais de arquivados. Não há importação parcial, sobrescrita, restauração, histórico ou notificações.
+
+Endpoints, ambos com um único arquivo no campo multipart `arquivo`:
+
+```http
+POST /equipamentos/importacao/validar
+POST /equipamentos/importacao/confirmar
+```
+
+Validar retorna 200 com `summary`, `warnings` e `rows`, sem escrever no banco. Linhas trazem número original, dados, `VALID`/`INVALID` e erros por campo. Confirmar reenvia o mesmo arquivo e repete as verificações. Erros de linha retornam 422; conflitos concorrentes, 409. Qualquer falha reverte todas as inserções. Sucesso retorna 201 com `summary.importedRows`. Consultas e inserções usam lotes de até 500; as inserções pertencem a uma única transação. Não foi necessária nova migration.
+
+A interface invalida a prévia ao trocar o arquivo, bloqueia cliques repetidos e só habilita confirmação sem erros. A prévia tem filtros e páginas de 50 linhas. Em queda de conexão na confirmação, confira a listagem e valide novamente antes de repetir: a gravação pode ter terminado sem a resposta chegar.
+
+Dependências locais de produção: [`@fastify/multipart`](https://github.com/fastify/fastify-multipart) para upload; [`read-excel-file`](https://github.com/catamphetamine/read-excel-file) para leitura; `fflate` e `fast-xml-parser` para verificar ZIP/XML, fórmulas e proteção antes da leitura. [`write-excel-file`](https://github.com/catamphetamine/write-excel-file) é somente de desenvolvimento, gerando fixtures fictícias em memória (também utilizadas pelos testes frontend). Instale as dependências do backend antes de executar a suíte do frontend.
+
+Proteções adicionais: rejeição de arquivos corrompidos/protegidos, macros, links externos e DTD; leitura em worker de até 15 segundos, heap de 128 MB; até duas importações simultâneas por instância (429 para excedentes). Limites ZIP: 50 MB descompactados, 20 MB por entrada, 1.000 entradas e 256 colunas. São permitidas 10.000 linhas não vazias; para conter matrizes artificialmente esparsas, a região física é limitada às primeiras 100.001 linhas, inclusive cabeçalho. `IMPORT_MAX_FILE_SIZE_MB` e `IMPORT_MAX_ROWS` permitem diminuir os limites máximos. Detalhes de conflitos mostram até 50 linhas relacionadas por ocorrência, com contagem e indicação de truncamento, mantendo todas as linhas da prévia. Valores inválidos exibidos são limitados a 300 caracteres. Identificadores numéricos são expandidos sem notação científica; dígitos já perdidos na origem não são recuperáveis, portanto prefira serial como texto no Excel.
+
+### Testes da importação e roteiro manual
+
+`npm.cmd test` inclui testes da importação com planilhas geradas em memória. `npm.cmd run test:integration` verifica prévia sem escrita, confirmação e conflito real pelo índice MySQL. Uma transação externa faz rollback de todos os dados fictícios; podem existir lacunas normais nos IDs. Não utiliza nem altera equipamentos reais.
+
+Para conferência manual, crie uma planilha **fictícia** com os cabeçalhos acima e duas linhas: seriais `EXCELMANUAL001`/`EXCELMANUAL002`, clientes e distribuidores de teste, contratos `CONTRATO-FICTICIO-A`/`CONTRATO-FICTICIO-B`, produto `MODELO-TESTE`, início `01/01/2026` e término `01/01/2027`.
+
+1. Use dois espaços em `End User  Name`; valide e confira duas linhas válidas, contratos diferentes e nenhuma escrita antes da confirmação.
+2. Faça variações com serial repetido, distribuidor vazio e data `31/02/2026`; confira erros e confirmação bloqueada.
+3. Acrescente uma coluna desconhecida e confira o aviso; experimente filtros e troque o arquivo para invalidar a prévia.
+4. Confirme somente o arquivo fictício válido e confira a quantidade na mensagem e a atualização da listagem.
+5. Reenvie o mesmo arquivo: os seriais existentes devem bloquear uma nova importação. Não exclua registros para repetir o teste sem autorização.
+
+Registros de uma confirmação manual permanecem no banco. Não use a planilha real de referência para esse roteiro. A aplicação ainda não tem autenticação: não exponha os endpoints de escrita publicamente sem proteção de acesso externa.
+
+Verificação do checkpoint 3E: 149 testes de backend e 46 de frontend aprovados; os 5 testes dependentes do banco pulados na suíte comum passaram na suíte de integração (6 testes ao todo). Foram exercitados 10.000 registros válidos e 10.000 duplicados, múltiplas abas, fórmulas, proteção, macros, limites ZIP e concorrência. Lint, build, Prisma validate/generate e as 3 migrations existentes passaram; auditorias completas e de produção do backend/frontend reportaram zero vulnerabilidades. Nenhuma fixture permaneceu no MySQL ou como arquivo XLSX no repositório. A revisão visual no navegador não foi realizada porque não havia navegador conectado; os testes da interface usam componentes e respostas HTTP simuladas.
 
 ## Estrutura atual
 

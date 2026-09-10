@@ -456,53 +456,44 @@ Antes de salvar:
 
 ## 16. Importação por Excel
 
-A V1 deverá permitir a importação de arquivos `.xlsx`.
+Na Etapa 3E, somente o formato Zebra abaixo é aceito em `.xlsx`. Esta definição substitui a previsão anterior de cabeçalhos snake_case e importação parcial: **qualquer linha inválida bloqueia todo o arquivo**.
 
-Colunas esperadas:
+| Cabeçalho | Campo da API | Obrigatório |
+|---|---|---|
+| Contract Name | contratoOnecare | Não |
+| Distributor Name | distribuidor | Sim |
+| End User Name | cliente | Sim |
+| Contract Start Date | dataInicioOnecare | Sim |
+| Contract End Date | dataFimOnecare | Sim |
+| Product Family | partNumber | Sim |
+| Serial # | serialNumber | Sim |
 
-```text
-serial_number
-part_number
-cliente
-patrimonio
-nota_fiscal
-distribuidor
-contrato_onecare
-data_inicio_onecare
-data_fim_onecare
-data_ultima_conferencia
-```
+Cabeçalho na primeira linha da primeira aba. Normalização: trim, espaços internos repetidos reduzidos a um, caixa ignorada e símbolos preservados. `End User  Name` equivale a `End User Name`. Colunas obrigatórias ausentes ou colunas mapeadas repetidas bloqueiam o arquivo. `Contract Status`, `Reseller Name` e `Quantity` são ignorados; outras colunas geram aviso e também são ignoradas. Cada linha não vazia cria um equipamento, independentemente de Quantity.
 
-`patrimonio`, `nota_fiscal`, `contrato_onecare` e `data_ultima_conferencia` são opcionais. As demais colunas, incluindo `distribuidor`, são obrigatórias.
+Contrato é preservado por linha e pode variar dentro do arquivo. Nenhum campo é extraído do nome do arquivo. `patrimonio`, `notaFiscal` e `dataUltimaConferencia` são sempre `null` nessa origem, não inventados ou deduzidos. Nota fiscal e distribuidor não possuem unicidade. Uma origem futura que forneça patrimônio deverá normalizá-lo como no cadastro manual, conferir conflitos em lote e bloquear duplicidades, inclusive de arquivados.
 
-Na futura Etapa 3E, `nota_fiscal` e `distribuidor` poderão se repetir. Valores vazios de nota fiscal deverão ser convertidos para `null`; distribuidor vazio deverá ser um erro bloqueante da linha. A planilha fornecida pelo usuário ainda será analisada antes da implementação definitiva da importação.
+As validações são compartilhadas com o cadastro manual: trim, serial em maiúsculas com apenas A-Z e números, obrigatoriedade, limites de texto e início não posterior ao término. Seriais numéricos são convertidos para texto decimal sem notação científica nem conversão intermediária para Number. Dígitos já perdidos no próprio Excel não podem ser recuperados; identificadores longos ou com zeros iniciais devem ser armazenados como texto na origem.
 
-As datas da planilha devem estar no formato `DD/MM/AAAA`, sempre com quatro dígitos no ano.
+Datas aceitas: células reais de data Excel, `DD/MM/AAAA` e `AAAA-MM-DD`. A API recebe `AAAA-MM-DD`; datas inexistentes ou formatos ambíguos são rejeitados, incluindo o dia fictício 29/02/1900 do Excel. A conversão preserva o dia civil, sem deslocamento por UTC, respeitando `America/Fortaleza`.
 
-Fluxo esperado:
-1. selecionar a planilha;
-2. validar cabeçalhos e conteúdo;
-3. apresentar uma prévia com linhas válidas e inválidas;
-4. solicitar confirmação;
-5. importar apenas as linhas válidas;
-6. apresentar um resumo com quantidades importadas, ignoradas e rejeitadas, incluindo o motivo de cada erro.
+Qualquer serial repetido no arquivo ou existente no banco bloqueia a confirmação, inclusive de arquivados. Não há importação parcial, atualização ou restauração automática. Consultas de conflitos são feitas em lotes de até 500 linhas, sem consulta por equipamento.
 
-Na V1, seriais já cadastrados devem ser ignorados e informados no relatório, sem sobrescrever registros existentes.
-
-Seriais repetidos dentro da própria planilha também não devem gerar mais de um equipamento. Após normalização, a primeira ocorrência válida poderá ser importada e as ocorrências seguintes deverão ser ignoradas e identificadas no relatório como duplicadas.
-
-Na futura implementação da importação, patrimônios informados devem receber `trim` e valores vazios devem ser convertidos para `null`. Linhas com patrimônio já utilizado no sistema (inclusive por equipamento arquivado) ou repetido em outra linha válida da planilha deverão ser rejeitadas e identificadas no relatório, sem sobrescrever registros. Essa regra será implementada na etapa de importação.
-
-A importação será dividida em dois endpoints:
+A importação usa dois endpoints:
 
 ```http
 POST /equipamentos/importacao/validar
 POST /equipamentos/importacao/confirmar
 ```
 
-O primeiro endpoint recebe a planilha e retorna a prévia de validação. Após a confirmação do usuário, o frontend envia a mesma planilha ao segundo endpoint. O backend deve repetir a validação antes de persistir os registros, sem depender do armazenamento temporário do arquivo no servidor.
+Ambos recebem `multipart/form-data`, com um único arquivo no campo `arquivo`, sem outros campos. Validar retorna HTTP 200 com `summary` (`totalRows`, `validRows`, `invalidRows`, `canImport`), `warnings` e `rows`. Cada linha informa `rowNumber`, `status` (`VALID` ou `INVALID`, situação da validação, não do contrato), `data` e `errors`. Erros informam linha, campo, código, valor e mensagem. Duplicidades internas incluem até 50 `conflictingRows` por ocorrência, `conflictingRowCount` e `conflictingRowsTruncated`; todas as linhas inválidas continuam na prévia. Esse limite evita respostas de tamanho quadrático com milhares de repetições.
 
-Por padrão, cada planilha poderá possuir no máximo `10 MB` e `10.000` linhas. Esses limites devem ser configuráveis por variáveis de ambiente. O backend deve rejeitar arquivos que ultrapassem qualquer um dos limites.
+Validar nunca escreve no banco. Confirmar recebe novamente o arquivo e repete toda a validação. Linhas inválidas retornam 422 `IMPORTACAO_INVALIDA` com detalhes por linha, sem gravar. Arquivos estruturalmente inválidos retornam erro padronizado em vez de prévia. A confirmação válida insere lotes de até 500 dentro de uma única transação, sem `skipDuplicates`, histórico ou notificações. Qualquer falha reverte tudo. O índice MySQL arbitra conflitos concorrentes; 409 `IMPORTACAO_CONFLITO` exige nova validação. Sucesso retorna 201, mensagem e `summary` com `totalRows` e `importedRows`.
+
+Limites: 10 MB e 10.000 linhas não vazias após o cabeçalho. `IMPORT_MAX_FILE_SIZE_MB` e `IMPORT_MAX_ROWS` podem reduzir, mas não ampliar esses tetos. Linhas completamente vazias são ignoradas, preservando o número original. Como proteção contra matrizes artificialmente esparsas, a região física de leitura é limitada às primeiras 100.001 linhas, inclusive cabeçalho.
+
+Segurança: verificar ZIP e tipo OOXML real; rejeitar arquivo vazio, corrompido, protegido, macros, links externos, DTD/entidades XML e fórmulas nos campos importados. Nada é executado ou salvo permanentemente; conteúdo da planilha não entra nos logs. Leitura em worker com limite de 15 segundos e heap de 128 MB; pacote descompactado até 50 MB, cada entrada até 20 MB, até 1.000 entradas e 256 colunas. Dimensões artificiais fora da região são rejeitadas. Até duas requisições de importação simultâneas por instância; excedentes recebem 429. Esses controles não substituem autenticação ou proteção de acesso na hospedagem.
+
+A interface oferece “Importar Excel”, nome/tamanho do arquivo, validação, resumo, avisos, prévia paginada em grupos de 50 e filtros todas/válidas/inválidas. Trocar arquivo invalida a prévia. Confirmar exige prévia válida e nenhuma operação em andamento. Erros na confirmação exigem validar novamente. Sucesso limpa arquivo/prévia e atualiza a listagem. Em queda de conexão na confirmação, conferir a listagem antes de repetir: a transação pode ter terminado sem a resposta chegar.
 
 ## 17. API
 
@@ -591,7 +582,7 @@ Confirmar importação:
 POST /equipamentos/importacao/confirmar
 ```
 
-Os corpos e respostas JSON da API devem utilizar propriedades em `camelCase`. Os nomes em `snake_case` permanecem restritos aos cabeçalhos da planilha e aos nomes físicos definidos no banco, quando aplicável.
+Os corpos e respostas JSON da API devem utilizar propriedades em `camelCase`. Os nomes em `snake_case` permanecem nos nomes físicos definidos no banco, quando aplicável. A importação utiliza os cabeçalhos Zebra da seção 16.
 
 ## 18. API de notificações
 

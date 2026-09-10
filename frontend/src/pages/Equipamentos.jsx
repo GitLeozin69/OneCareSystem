@@ -3,6 +3,7 @@ import Button from '../components/Button.jsx'
 import EquipamentoForm from '../components/EquipamentoForm.jsx'
 import EquipamentosTable from '../components/EquipamentosTable.jsx'
 import HistoricoContratos from '../components/HistoricoContratos.jsx'
+import ImportacaoExcel from '../components/ImportacaoExcel.jsx'
 import { equipamentosApi } from '../services/api.js'
 
 const defaultQuery = {
@@ -116,6 +117,8 @@ export default function Equipamentos() {
     }
   }
 
+  if (view?.type === 'import') return <ImportacaoExcel onCancel={() => returnToList()} onImported={returnToList} />
+
   if (view?.type === 'history') {
     return (
       <HistoricoContratos
@@ -157,6 +160,7 @@ export default function Equipamentos() {
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
+          {!archived && <Button onClick={() => { setNotice(''); setView({ type: 'import' }) }}>Importar Excel</Button>}
           <Button onClick={() => switchMode(archived ? 'active' : 'archived')}>
             {archived ? '← Voltar aos equipamentos' : 'Equipamentos arquivados'}
           </Button>

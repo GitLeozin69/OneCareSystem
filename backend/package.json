@@ -19,10 +19,14 @@
     "db:migrate:status": "prisma migrate status"
   },
   "dependencies": {
+    "@fastify/multipart": "^10.1.1",
     "@prisma/adapter-mariadb": "^7.10.0",
     "@prisma/client": "^7.10.0",
     "dotenv": "^17.4.2",
-    "fastify": "^5.12.3"
+    "fast-xml-parser": "^5.11.1",
+    "fastify": "^5.12.3",
+    "fflate": "^0.8.3",
+    "read-excel-file": "^9.3.10"
   },
   "overrides": {
     "@prisma/adapter-mariadb": {
@@ -39,6 +43,7 @@
     "@eslint/js": "^10.0.1",
     "eslint": "^10.10.0",
     "globals": "^17.12.0",
-    "prisma": "^7.10.0"
+    "prisma": "^7.10.0",
+    "write-excel-file": "^4.1.1"
   }
 }

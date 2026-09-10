@@ -10,15 +10,26 @@ const messages = {
   INTERVALO_DATAS_INVALIDO: 'O término não pode ser anterior ao início do OneCare.',
   REQUISICAO_INVALIDA: 'Verifique os dados informados.',
   PARAMETRO_INVALIDO: 'Verifique os parâmetros da consulta.',
+  FORMATO_INVALIDO: 'Envie somente uma planilha .xlsx no campo arquivo.',
+  ARQUIVO_INVALIDO: 'Arquivo inválido, protegido ou fora dos limites de segurança.',
+  ARQUIVO_VAZIO: 'A planilha está vazia.',
+  ARQUIVO_AUSENTE: 'Selecione uma planilha.',
+  LIMITE_ARQUIVO: 'O arquivo excede o limite de tamanho permitido.',
+  LIMITE_LINHAS: 'A planilha excede o limite de linhas permitido.',
+  CABECALHO_INVALIDO: 'Corrija os cabeçalhos da planilha.',
+  IMPORTACAO_INVALIDA: 'Nenhum equipamento foi importado. Corrija todas as linhas inválidas.',
+  IMPORTACAO_CONFLITO: 'Conflito na confirmação. Nenhum equipamento foi importado; valide novamente.',
+  IMPORTACAO_OCUPADA: 'Há importações em andamento. Tente novamente em instantes.',
 }
 
 export class ApiError extends Error {
-  constructor(message, { code, status, fields = {} } = {}) {
+  constructor(message, { code, status, fields = {}, details = [] } = {}) {
     super(message)
     this.name = 'ApiError'
     this.code = code
     this.status = status
     this.fields = fields
+    this.details = details
   }
 }
 
@@ -30,12 +41,13 @@ const editableFields = new Set([
 
 async function request(path, { signal, method = 'GET', body } = {}) {
   let response
+  const multipart = body instanceof FormData
   try {
     response = await fetch(`/api${path}`, {
       method,
       signal,
-      headers: body ? { 'Content-Type': 'application/json' } : undefined,
-      body: body ? JSON.stringify(body) : undefined,
+      headers: body && !multipart ? { 'Content-Type': 'application/json' } : undefined,
+      body: multipart ? body : body ? JSON.stringify(body) : undefined,
     })
   } catch (error) {
     if (error.name === 'AbortError') throw error
@@ -55,12 +67,23 @@ async function request(path, { signal, method = 'GET', body } = {}) {
     }
     if (code === 'SERIAL_DUPLICADO') fields.serialNumber = message
     if (code === 'PATRIMONIO_DUPLICADO') fields.patrimonio = message
-    throw new ApiError(message, { code, status: response.status, fields })
+    throw new ApiError(message, { code, status: response.status, fields,
+      details: messages[code] && Array.isArray(data?.details) ? data.details : [] })
   }
   return data
 }
 
 export const equipamentosApi = {
+  validateImport(file, signal) {
+    const body = new FormData()
+    body.append('arquivo', file)
+    return request('/equipamentos/importacao/validar', { method: 'POST', body, signal })
+  },
+  confirmImport(file, signal) {
+    const body = new FormData()
+    body.append('arquivo', file)
+    return request('/equipamentos/importacao/confirmar', { method: 'POST', body, signal })
+  },
   list(query, signal) {
     const params = new URLSearchParams({
       page: query.page, limit: query.limit, sortBy: query.sortBy, order: query.order,
