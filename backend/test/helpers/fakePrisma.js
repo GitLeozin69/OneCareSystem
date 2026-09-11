@@ -33,6 +33,13 @@ function matchesValue(value, condition) {
           String(condition.contains).toLocaleLowerCase(),
         )
     }
+
+    if (value === null || value === undefined) return false
+    if (Object.hasOwn(condition, 'lt') && !(value < condition.lt)) return false
+    if (Object.hasOwn(condition, 'lte') && !(value <= condition.lte)) return false
+    if (Object.hasOwn(condition, 'gt') && !(value > condition.gt)) return false
+    if (Object.hasOwn(condition, 'gte') && !(value >= condition.gte)) return false
+    return true
   }
 
   return value === condition

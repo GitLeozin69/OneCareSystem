@@ -2,7 +2,7 @@
 
 Sistema web para controle de equipamentos vinculados a contratos OneCare.
 
-O projeto está na Etapa 3E: API e interface de equipamentos com listagem, pesquisa, paginação, ordenação, cadastro, edição, arquivamento, restauração, histórico de contratos, nota fiscal, distribuidor e importação Excel. Status, dashboard e notificações ainda não estão implementados.
+O projeto está na Etapa 4A: além dos recursos de equipamentos e importação Excel da Etapa 3E, o backend calcula e filtra o status da cobertura OneCare. A apresentação do status no frontend, a tela de vencidos, o dashboard e as notificações ainda não estão implementados.
 
 ## Tecnologias
 
@@ -181,6 +181,7 @@ A migration `20260910120000_add_nota_fiscal_distribuidor` adiciona `nota_fiscal`
 - `limit`: itens por página, padrão `20` e máximo `100`;
 - `sortBy`: campo de ordenação, padrão `createdAt`;
 - `order`: direção `asc` ou `desc`, padrão `desc`.
+- `status`: filtro opcional com `ATIVO`, `VENCENDO` ou `VENCIDO`.
 
 Os campos aceitos em `sortBy` são `serialNumber`, `partNumber`, `patrimonio`, `notaFiscal`, `distribuidor`, `cliente`, `contratoOnecare`, `dataInicioOnecare`, `dataFimOnecare`, `createdAt` e `updatedAt`.
 
@@ -190,6 +191,26 @@ Exemplo:
 
 ```http
 GET /equipamentos?q=SN123&page=1&limit=20&sortBy=createdAt&order=desc
+```
+
+Para obter somente contratos vencidos:
+
+```http
+GET /equipamentos?status=VENCIDO&page=1&limit=20
+```
+
+O backend usa a data civil atual em `America/Fortaleza`. Um término anterior a hoje é `VENCIDO`; entre hoje e o limite de três meses corridos, inclusive, é `VENCENDO`; após o limite é `ATIVO`. O limite ajusta fins de mês para o último dia válido, em vez de usar 90 dias fixos. `diasRestantes` é positivo no futuro, zero no dia do vencimento e negativo depois dele.
+
+`statusOnecare` e `diasRestantes` são calculados a cada resposta e não existem no banco. Eles são retornados na listagem, consulta por ID, cadastro e atualização. Se um equipamento não possuir data de término, ambos são `null`; ele permanece na listagem sem filtro e é excluído quando `status` for informado. O schema atual ainda exige as datas no cadastro, e nenhuma migration foi criada nesta etapa.
+
+Exemplo dos campos calculados em um equipamento:
+
+```json
+{
+  "dataFimOnecare": "2026-09-25",
+  "statusOnecare": "VENCENDO",
+  "diasRestantes": 15
+}
 ```
 
 Resposta:

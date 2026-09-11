@@ -13,6 +13,11 @@ import {
   normalizeEquipamentoListQuery,
   normalizePaginationQuery,
 } from '../utils/equipamentoListValidation.js'
+import {
+  createOnecareReference,
+  onecareStatusWhere,
+  withOnecareStatus,
+} from '../utils/onecareStatus.js'
 
 function notFoundError() {
   return new AppError({
@@ -45,9 +50,14 @@ function contractSnapshot(source) {
   }
 }
 
-async function listEquipamentos(prisma, query, arquivado) {
-  const normalized = normalizeEquipamentoListQuery(query)
+async function listEquipamentos(prisma, query, arquivado, clock, allowStatus = false) {
+  const normalized = normalizeEquipamentoListQuery(query, { allowStatus })
+  const reference = createOnecareReference(clock())
   const where = { arquivado }
+
+  if (normalized.status) {
+    where.dataFimOnecare = onecareStatusWhere(normalized.status, reference)
+  }
 
   if (normalized.q) {
     where.OR = [
@@ -76,7 +86,7 @@ async function listEquipamentos(prisma, query, arquivado) {
     })
 
   return {
-    equipamentos,
+    equipamentos: equipamentos.map((item) => withOnecareStatus(item, reference)),
     page: normalized.page,
     limit: normalized.limit,
     total,
@@ -89,7 +99,7 @@ async function listEquipamentos(prisma, query, arquivado) {
 export function createEquipamentoService({ prisma, clock = () => new Date() }) {
   return {
     async list(query) {
-      return listEquipamentos(prisma, query, false)
+      return listEquipamentos(prisma, query, false, clock, true)
     },
 
     async create(payload) {
@@ -113,7 +123,8 @@ export function createEquipamentoService({ prisma, clock = () => new Date() }) {
       }
 
       try {
-        return await prisma.equipamento.create({ data })
+        const equipamento = await prisma.equipamento.create({ data })
+        return withOnecareStatus(equipamento, createOnecareReference(clock()))
       } catch (error) {
         throw fromUniqueConstraintError(error) ?? error
       }
@@ -129,14 +140,14 @@ export function createEquipamentoService({ prisma, clock = () => new Date() }) {
         throw notFoundError()
       }
 
-      return equipamento
+      return withOnecareStatus(equipamento, createOnecareReference(clock()))
     },
 
     async update(rawId, payload) {
       const id = normalizeEquipamentoId(rawId)
 
       try {
-        return await prisma.$transaction(async (transaction) => {
+        const equipamento = await prisma.$transaction(async (transaction) => {
           const current = await transaction.equipamento.findFirst({
             where: { id, arquivado: false },
           })
@@ -189,6 +200,7 @@ export function createEquipamentoService({ prisma, clock = () => new Date() }) {
             data: changes,
           })
         })
+        return withOnecareStatus(equipamento, createOnecareReference(clock()))
       } catch (error) {
         throw fromUniqueConstraintError(error) ?? error
       }
@@ -204,13 +216,15 @@ export function createEquipamentoService({ prisma, clock = () => new Date() }) {
         throw notFoundError()
       }
 
-      return prisma.equipamento.update({
+      const now = clock()
+      const archived = await prisma.equipamento.update({
         where: { id },
         data: {
           arquivado: true,
-          arquivadoEm: clock(),
+          arquivadoEm: now,
         },
       })
+      return withOnecareStatus(archived, createOnecareReference(now))
     },
 
     async restore(rawId) {
@@ -223,17 +237,18 @@ export function createEquipamentoService({ prisma, clock = () => new Date() }) {
         throw notFoundError()
       }
 
-      return prisma.equipamento.update({
+      const restored = await prisma.equipamento.update({
         where: { id },
         data: {
           arquivado: false,
           arquivadoEm: null,
         },
       })
+      return withOnecareStatus(restored, createOnecareReference(clock()))
     },
 
     async listArchived(query) {
-      return listEquipamentos(prisma, query, true)
+      return listEquipamentos(prisma, query, true, clock)
     },
 
     async listContractHistory(rawId, query) {

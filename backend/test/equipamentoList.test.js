@@ -254,8 +254,8 @@ test('limit maior que 100 retorna erro 400', async (context) => {
 })
 
 test('parâmetro desconhecido retorna erro 400 sem detalhes internos', async (context) => {
-  const response = await get(setup(context), '?status=VENCENDO')
-  assertInvalidParameter(response, 'status')
+  const response = await get(setup(context), '?filtro=VENCENDO')
+  assertInvalidParameter(response, 'filtro')
   assert.doesNotMatch(response.body, /Prisma|MySQL|DATABASE_URL|stack/i)
 })
 

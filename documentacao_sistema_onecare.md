@@ -190,6 +190,8 @@ No dia do vencimento, o contador deve apresentar `0 dias restantes`.
 
 O backend é a fonte oficial do status. O frontend apenas apresenta o status recebido e pode atualizar o contador visualmente.
 
+Na Etapa 4A, `statusOnecare` é calculado dinamicamente nas respostas da API e nunca persistido. Se `dataFimOnecare` não existir, `statusOnecare` e `diasRestantes` serão `null`; o equipamento continuará na listagem geral, mas será excluído quando um status específico for filtrado. O schema atual mantém as datas contratuais obrigatórias, portanto esse tratamento é defensivo e não altera o cadastro nem exige migration.
+
 ## 8. Contador de vencimento
 
 O sistema deve mostrar:
@@ -216,6 +218,8 @@ Deve ser calculado a partir de:
 ```text
 data_fim_onecare - data_atual
 ```
+
+`diasRestantes` representa dias de calendário: é positivo para vencimentos futuros, `0` no próprio dia e negativo após o vencimento. O cálculo usa a data civil de `America/Fortaleza`, sem depender da hora UTC, e retorna `null` quando não houver data de término.
 
 Na interface e nas planilhas, as datas devem ser apresentadas no formato `DD/MM/AAAA`. Na comunicação interna da API e na persistência, devem utilizar o formato não ambíguo `AAAA-MM-DD`, mantendo o tipo `DATE` no MySQL. Conversões não devem deslocar o dia por influência de UTC.
 
@@ -380,6 +384,7 @@ Os parâmetros são opcionais:
 - `limit`: quantidade por página, padrão `20` e máximo `100`;
 - `sortBy`: campo de ordenação, padrão `createdAt`;
 - `order`: direção da ordenação, padrão `desc`.
+- `status`: situação calculada, aceitando somente `ATIVO`, `VENCENDO` ou `VENCIDO`.
 
 A pesquisa por `q` remove espaços das extremidades e consulta os campos `serialNumber`, `partNumber`, `patrimonio`, `notaFiscal`, `distribuidor`, `cliente` e `contratoOnecare`. Valor vazio ou contendo somente espaços equivale a não informar a pesquisa.
 
@@ -397,7 +402,7 @@ Os campos permitidos em `sortBy` são:
 - `createdAt`;
 - `updatedAt`.
 
-`order` aceita somente `asc` ou `desc`. `page` deve ser um inteiro maior ou igual a `1`, e `limit` deve ser um inteiro entre `1` e `100`. Parâmetros inválidos retornam HTTP `400`.
+`order` aceita somente `asc` ou `desc`. `status` aceita exatamente os três valores em maiúsculas. `page` deve ser um inteiro maior ou igual a `1`, e `limit` deve ser um inteiro entre `1` e `100`. Parâmetros inválidos retornam HTTP `400`.
 
 Empates são resolvidos pelo ID na mesma direção da ordenação. `page` deve ser representável com segurança como inteiro em JavaScript. Parâmetros inválidos, desconhecidos ou repetidos retornam código `PARAMETRO_INVALIDO`, mensagem e detalhes do campo.
 
@@ -419,9 +424,9 @@ Registros arquivados ficam fora da listagem e de sua contagem. Uma página váli
 }
 ```
 
-`GET /equipamentos/arquivados` aceita os mesmos parâmetros, validações, campos de pesquisa e ordenação e retorna exatamente o mesmo formato, considerando somente registros arquivados.
+`GET /equipamentos/arquivados` mantém os mesmos parâmetros de pesquisa, paginação e ordenação e retorna o mesmo formato, considerando somente registros arquivados. O filtro `status` desta etapa pertence apenas à listagem operacional `GET /equipamentos`.
 
-O filtro por status permanece reservado para a Etapa 4, quando o cálculo oficial de status for implementado no backend. Filtros adicionais podem ser implementados futuramente.
+Na Etapa 4A, `GET /equipamentos?status=VENCIDO&page=1&limit=20` aplica a faixa de datas diretamente na consulta Prisma, antes da paginação, e combina o filtro com pesquisa e ordenação. `total` e `totalPages` consideram somente o status escolhido. Sem `status`, todos os equipamentos não arquivados continuam na listagem. A apresentação visual e a tela de vencidos permanecem fora desta etapa.
 
 ## 15. Cadastro e edição
 

@@ -1,4 +1,5 @@
 import { AppError } from './appError.js'
+import { ONECARE_STATUSES } from './onecareStatus.js'
 
 export const EQUIPAMENTO_SORT_FIELDS = [
   'serialNumber',
@@ -14,13 +15,13 @@ export const EQUIPAMENTO_SORT_FIELDS = [
   'updatedAt',
 ]
 
-const allowedParameters = new Set([
+const allowedParameters = [
   'q',
   'page',
   'limit',
   'sortBy',
   'order',
-])
+]
 const allowedSortFields = new Set(EQUIPAMENTO_SORT_FIELDS)
 const allowedOrders = new Set(['asc', 'desc'])
 const paginationParameters = new Set(['page', 'limit'])
@@ -90,8 +91,9 @@ export function normalizePaginationQuery(query = {}) {
   }
 }
 
-export function normalizeEquipamentoListQuery(query = {}) {
-  rejectUnknownParameters(query, allowedParameters)
+export function normalizeEquipamentoListQuery(query = {}, { allowStatus = false } = {}) {
+  rejectUnknownParameters(query, new Set(allowStatus
+    ? [...allowedParameters, 'status'] : allowedParameters))
 
   const page = normalizePositiveInteger(query.page, 'page', 1, Number.MAX_SAFE_INTEGER)
   const limit = normalizePositiveInteger(query.limit, 'limit', 20, 100)
@@ -109,8 +111,14 @@ export function normalizeEquipamentoListQuery(query = {}) {
     throw invalidParameter('order', 'Use asc ou desc.')
   }
 
+  if (allowStatus && query.status !== undefined &&
+    (typeof query.status !== 'string' || !ONECARE_STATUSES.includes(query.status))) {
+    throw invalidParameter('status', `Use um destes valores: ${ONECARE_STATUSES.join(', ')}.`)
+  }
+
   return {
     q: normalizeQ(query.q),
+    status: allowStatus ? query.status : undefined,
     page,
     limit,
     sortBy,
