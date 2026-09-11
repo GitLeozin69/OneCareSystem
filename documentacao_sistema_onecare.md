@@ -323,8 +323,11 @@ Quantidade de contratos com até 3 meses restantes.
 ### OneCare vencido
 Quantidade de contratos vencidos.
 
-### Vencimento em até 30 dias
-Quantidade de contratos que vencem nos próximos 30 dias.
+### Sem data de término
+Quantidade de equipamentos não arquivados sem data final de cobertura.
+
+### Arquivados
+Quantidade de equipamentos arquivados logicamente, apresentada separadamente dos indicadores operacionais.
 
 Também pode existir uma área com:
 - notificações recentes;
@@ -332,6 +335,12 @@ Também pode existir uma área com:
 - últimos equipamentos cadastrados.
 
 Por padrão, os indicadores devem considerar apenas equipamentos não arquivados.
+
+Na Etapa 5, o dashboard é alimentado por `GET /dashboard/resumo`. Os indicadores são calculados dinamicamente, sem persistência, e separam `totalEquipamentos`, `onecareAtivo`, `onecareVencendo`, `onecareVencido`, `semDataTermino` e `arquivados`. O total operacional considera somente não arquivados e é igual à soma das quatro categorias de cobertura.
+
+As contagens e listas são obtidas em uma transação de leitura usando as mesmas faixas de data da Etapa 4A. `semDataTermino` é a diferença entre o total operacional e as três categorias; essa estratégia respeita o schema atual, no qual a data é obrigatória, e mantém a igualdade das categorias caso exista um registro defensivamente sem classificação. `proximosVencimentos` contém até dez equipamentos `VENCENDO`, em ordem crescente de término; `vencidosRecentes` contém até dez `VENCIDO`, em ordem decrescente de término. Ambas excluem arquivados e expõem somente os campos necessários ao dashboard.
+
+Na interface, os cards de total, ativo, vencendo, vencido e arquivados abrem as listagens correspondentes. O card sem data de término é informativo enquanto não existir esse filtro na API. As listas reutilizam os indicadores da Etapa 4B, permitem abrir detalhes e não recalculam status ou dias no navegador. A atualização manual refaz a consulta sem intervalo automático.
 
 ## 13. Tela de equipamentos
 
@@ -607,25 +616,31 @@ PATCH /notificacoes/:id/lida
 
 ## 19. API do dashboard
 
-Criar endpoint específico para informações resumidas:
+Endpoint implementado:
 
 ```http
-GET /dashboard
+GET /dashboard/resumo
 ```
 
-Exemplo:
+Formato:
 
 ```json
 {
-  "total": 100,
-  "ativos": 70,
-  "vencendo": 15,
-  "vencidos": 10,
-  "venceEm30Dias": 5
+  "generatedAt": "2026-09-11T10:00:00-03:00",
+  "totals": {
+    "totalEquipamentos": 100,
+    "onecareAtivo": 60,
+    "onecareVencendo": 20,
+    "onecareVencido": 15,
+    "semDataTermino": 5,
+    "arquivados": 3
+  },
+  "proximosVencimentos": [],
+  "vencidosRecentes": []
 }
 ```
 
-A estrutura final pode ser adaptada conforme as necessidades reais do frontend.
+Os itens das duas listas usam `id`, `serialNumber`, `partNumber`, `cliente`, `distribuidor`, `contratoOnecare`, `dataFimOnecare`, `statusOnecare` e `diasRestantes`. Os status e contadores são calculados com a referência única da requisição em `America/Fortaleza`. Os totais e listas não são armazenados no banco.
 
 ## 20. Banco de dados
 

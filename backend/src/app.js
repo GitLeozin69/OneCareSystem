@@ -1,15 +1,20 @@
 import Fastify from 'fastify'
 
 import { errorHandler } from './middlewares/errorHandler.js'
+import { dashboardRoutes } from './routes/dashboardRoutes.js'
 import { equipamentoRoutes } from './routes/equipamentoRoutes.js'
 import { importacaoRoutes } from './routes/importacaoRoutes.js'
 
-export function buildApp({ equipamentoService, importacaoService, importacaoLimits, ...fastifyOptions } = {}) {
+export function buildApp({ dashboardService, equipamentoService, importacaoService, importacaoLimits, ...fastifyOptions } = {}) {
   const app = Fastify(fastifyOptions)
 
   app.setErrorHandler(errorHandler)
 
   app.get('/health', async () => ({ status: 'ok' }))
+
+  if (dashboardService) {
+    app.register(dashboardRoutes, { prefix: '/dashboard', dashboardService })
+  }
 
   if (equipamentoService) {
     app.register(equipamentoRoutes, {

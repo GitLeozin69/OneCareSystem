@@ -119,3 +119,9 @@ export const equipamentosApi = {
     return request(`/equipamentos/${encodeURIComponent(id)}/historico-contratos?${params}`, { signal })
   },
 }
+
+export const dashboardApi = {
+  summary(signal) {
+    return request('/dashboard/resumo', { signal })
+  },
+}

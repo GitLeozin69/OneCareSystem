@@ -8,6 +8,17 @@ const dateFormatter = new Intl.DateTimeFormat('en-US', {
   month: '2-digit',
   day: '2-digit',
 })
+const dateTimeFormatter = new Intl.DateTimeFormat('en-CA', {
+  timeZone: ONECARE_TIME_ZONE,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+  hourCycle: 'h23',
+  timeZoneName: 'longOffset',
+})
 
 function utcDate(year, month, day) {
   return new Date(Date.UTC(year, month - 1, day))
@@ -43,6 +54,14 @@ export function addCalendarMonths(value, amount) {
 export function createOnecareReference(now = new Date()) {
   const today = currentDateInFortaleza(now)
   return { today, threeMonthLimit: addCalendarMonths(today, 3) }
+}
+
+export function formatOnecareGeneratedAt(now) {
+  const parts = Object.fromEntries(
+    dateTimeFormatter.formatToParts(now).map(({ type, value }) => [type, value]),
+  )
+  const offset = parts.timeZoneName.replace('GMT', '') || '+00:00'
+  return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}:${parts.second}${offset}`
 }
 
 export function calculateOnecareStatus(dataFimOnecare, reference = createOnecareReference()) {

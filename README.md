@@ -2,7 +2,7 @@
 
 Sistema web para controle de equipamentos vinculados a contratos OneCare.
 
-O projeto está na Etapa 4B: o backend calcula e filtra o status da cobertura OneCare, e o frontend apresenta esses dados na listagem e na tela de equipamentos vencidos. Dashboard e notificações ainda não estão implementados.
+O projeto está na Etapa 5: além do controle de equipamentos e dos status de cobertura, há um dashboard operacional com indicadores e listas de vencimentos. Notificações automáticas ainda não estão implementadas.
 
 ## Tecnologias
 
@@ -122,6 +122,14 @@ A listagem operacional mostra o indicador textual `Ativo`, `Vencendo`, `Vencido`
 
 O filtro “Status OneCare” consulta o backend com `status=ATIVO`, `VENCENDO` ou `VENCIDO`; “Todos” remove o parâmetro. Alterar o filtro volta à página 1 e preserva pesquisa, limite e ordenação. “Equipamentos vencidos” abre uma tela específica que sempre consulta `GET /equipamentos?status=VENCIDO`, com pesquisa, paginação, ordenação, detalhes, edição, histórico e arquivamento. Equipamentos arquivados permanecem em sua área separada.
 
+### Dashboard operacional
+
+“Dashboard” abre a visão resumida alimentada por `GET /dashboard/resumo`. Os cards apresentam o total operacional, contratos ativos, vencendo e vencidos, equipamentos sem data de término e arquivados. Total, ativo, vencendo, vencido e arquivados funcionam como atalhos para as listagens correspondentes; o card sem data é apenas informativo porque ainda não existe esse filtro na API de equipamentos.
+
+Os indicadores são calculados dinamicamente pelo backend com as mesmas regras de status e com a data civil de `America/Fortaleza`. Equipamentos arquivados não entram no total operacional nem nas categorias. “Próximos vencimentos” mostra até dez contratos `VENCENDO`, do término mais próximo ao mais distante; “Vencidos recentemente” mostra até dez contratos vencidos, do término mais recente ao mais antigo. As listas reutilizam os indicadores e os dias recebidos da API e permitem abrir os detalhes completos.
+
+“Atualizar dashboard” realiza uma nova consulta. Durante a atualização, os dados anteriores permanecem visíveis; erros são apresentados de forma genérica e podem ser tentados novamente.
+
 ### Roteiro manual
 
 1. Inicie backend e frontend nos dois terminais acima e abra `http://127.0.0.1:5173`.
@@ -135,6 +143,8 @@ O filtro “Status OneCare” consulta o backend com `status=ATIVO`, `VENCENDO` 
 9. Use Tab/Enter para navegar e teste em janela estreita: formulário em uma coluna, botões acessíveis e tabela com rolagem horizontal.
 10. Confira os quatro indicadores de status e suas frases de prazo; alterne o filtro e confirme que pesquisa e ordenação permanecem.
 11. Abra “Equipamentos vencidos”, teste pesquisa/paginação/ordenação e edite somente um registro de teste; ao renovar o término, ele deve sair da tela após a nova consulta.
+12. Abra “Dashboard”, compare os cards com as listagens filtradas, confira as duas listas e seus detalhes, teste os atalhos e use “Atualizar dashboard”.
+13. Confirme que equipamentos arquivados aparecem somente no card próprio e não integram os indicadores operacionais.
 
 Não altere equipamentos reais para esses testes. Registros criados manualmente permanecem no banco; a interface não realiza exclusão física.
 
@@ -238,6 +248,32 @@ Resposta:
 ```
 
 `GET /equipamentos/arquivados` aceita os mesmos parâmetros e devolve o mesmo formato, considerando exclusivamente equipamentos arquivados. `DELETE /equipamentos/:id` realiza arquivamento lógico e `PATCH /equipamentos/:id/restaurar` devolve o registro à listagem operacional.
+
+## API do dashboard
+
+```http
+GET /dashboard/resumo
+```
+
+A resposta contém `generatedAt`, os seis valores em `totals`, até dez itens em `proximosVencimentos` e até dez em `vencidosRecentes`. Os itens das listas expõem somente ID, serial, part number, cliente, distribuidor, contrato, término, status e dias restantes. As contagens e listas são consultadas em uma única transação de leitura; nenhum total ou status é persistido. Como o schema atual exige a data de término, `semDataTermino` é obtido pela diferença entre o total operacional e as três categorias, mantendo também o tratamento defensivo para dados sem classificação.
+
+```json
+{
+  "generatedAt": "2026-09-11T10:00:00-03:00",
+  "totals": {
+    "totalEquipamentos": 100,
+    "onecareAtivo": 60,
+    "onecareVencendo": 20,
+    "onecareVencido": 15,
+    "semDataTermino": 5,
+    "arquivados": 3
+  },
+  "proximosVencimentos": [],
+  "vencidosRecentes": []
+}
+```
+
+É sempre válida a relação `totalEquipamentos = onecareAtivo + onecareVencendo + onecareVencido + semDataTermino`.
 
 ### Histórico de contratos
 

@@ -1,11 +1,18 @@
 import { buildApp } from './app.js'
 import { createPrismaClient } from './lib/prisma.js'
+import { createDashboardService } from './services/dashboardService.js'
 import { createEquipamentoService } from './services/equipamentoService.js'
 import { createImportacaoService } from './services/importacaoService.js'
 
 const prisma = createPrismaClient()
 const equipamentoService = createEquipamentoService({ prisma })
-const app = buildApp({ logger: true, equipamentoService, importacaoService: createImportacaoService({ prisma }) })
+const dashboardService = createDashboardService({ prisma })
+const app = buildApp({
+  logger: true,
+  dashboardService,
+  equipamentoService,
+  importacaoService: createImportacaoService({ prisma }),
+})
 const host = process.env.HOST ?? '0.0.0.0'
 const port = Number.parseInt(process.env.PORT ?? '3000', 10)
 

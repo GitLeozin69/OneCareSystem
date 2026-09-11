@@ -41,8 +41,8 @@ export default function EquipamentoDetalhes({ equipamento, onBack, onEdit, onHis
           ))}
         </dl>
         <div className="flex flex-wrap justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-5 sm:px-8">
-          <Button onClick={onHistory}>Ver histórico</Button>
-          {!equipamento.arquivado && <Button variant="primary" onClick={onEdit}>Editar equipamento</Button>}
+          {onHistory && <Button onClick={onHistory}>Ver histórico</Button>}
+          {onEdit && !equipamento.arquivado && <Button variant="primary" onClick={onEdit}>Editar equipamento</Button>}
         </div>
       </div>
     </section>

@@ -21,10 +21,10 @@ const sortOptions = [
   ['dataInicioOnecare', 'Início do OneCare'], ['dataFimOnecare', 'Término do OneCare'],
 ]
 
-export default function Equipamentos() {
-  const [mode, setMode] = useState('active')
+export default function Equipamentos({ initialMode = 'active', initialStatus = '' }) {
+  const [mode, setMode] = useState(initialMode)
   const [queries, setQueries] = useState({
-    active: { ...defaultQuery, status: '' },
+    active: { ...defaultQuery, status: initialStatus },
     expired: { ...defaultQuery, status: 'VENCIDO' },
     archived: { ...defaultQuery },
   })
