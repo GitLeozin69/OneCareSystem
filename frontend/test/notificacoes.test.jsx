@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import App from '../src/App.jsx'
+import OneCareApp from '../src/App.jsx'
+
+const App = () => <OneCareApp initialUser={{ id: 1, username: 'admin', role: 'ADMIN', ativo: true }} />
 
 const json = (data, status = 200) => ({ ok: status < 400, status, json: async () => data })
 const equipamento = {

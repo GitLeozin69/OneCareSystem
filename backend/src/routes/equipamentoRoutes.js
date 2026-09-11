@@ -41,6 +41,7 @@ export async function equipamentoRoutes(app, options) {
   app.post(
     '/',
     {
+      config: { access: 'ADMIN' },
       schema: {
         body: {
           type: 'object',
@@ -77,6 +78,7 @@ export async function equipamentoRoutes(app, options) {
   app.patch(
     '/:id',
     {
+      config: { access: 'ADMIN' },
       schema: {
         params: idParamsSchema,
         body: {
@@ -92,13 +94,13 @@ export async function equipamentoRoutes(app, options) {
 
   app.delete(
     '/:id',
-    { schema: { params: idParamsSchema } },
+    { config: { access: 'ADMIN' }, schema: { params: idParamsSchema } },
     controller.archive,
   )
 
   app.patch(
     '/:id/restaurar',
-    { schema: { params: idParamsSchema } },
+    { config: { access: 'ADMIN' }, schema: { params: idParamsSchema } },
     controller.restore,
   )
 }

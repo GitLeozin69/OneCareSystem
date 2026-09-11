@@ -2,7 +2,7 @@
 
 Sistema web para controle de equipamentos vinculados a contratos OneCare.
 
-O projeto está na Etapa 6A: além do controle de equipamentos, dos status de cobertura e do dashboard, há notificações internas para contratos vencendo ou vencidos. O envio por e-mail não faz parte desta etapa e permanece para a Etapa 6B.
+O projeto está na Etapa 7A: além do controle operacional e das notificações internas, há autenticação por contas individuais e controle de acesso entre `ADMIN` e `VISUALIZADOR`. O envio por e-mail não faz parte desta etapa e permanece reservado para a Etapa 6B.
 
 ## Tecnologias
 
@@ -53,6 +53,10 @@ O schema está em `backend/prisma/schema.prisma` e utiliza as tabelas:
 - `equipamentos`
 - `notificacoes`
 - `historico_contratos`
+- `usuarios`
+- `sessoes`
+
+As sessões usam tokens opacos em cookies `HttpOnly`; somente o hash do token é persistido no MySQL.
 
 Valide o schema:
 
@@ -79,6 +83,20 @@ npm.cmd run db:migrate:status
 ```
 
 Esses comandos devem ser executados somente com uma URL que aponte para o banco `ZebraOneCare`. Não utilize credenciais de produção durante o desenvolvimento local.
+
+## Autenticação e primeiro administrador
+
+Depois de aplicar as migrations, crie o único administrador em um terminal interativo:
+
+```powershell
+npm.cmd --prefix backend run admin:create
+```
+
+O comando solicita usuário, senha e confirmação, oculta a senha quando o terminal permite e recusa a criação de um segundo administrador. Não existe credencial padrão. O administrador cria contas `VISUALIZADOR` pela tela “Usuários”; essas contas consultam dashboard, equipamentos, arquivados e históricos, mas não alteram dados.
+
+No `.env`, configure `FRONTEND_ORIGIN` com uma lista explícita de origens, `SESSION_DURATION_HOURS` (padrão `8`) e `COOKIE_SECURE`. Em desenvolvimento HTTP local, use `COOKIE_SECURE=false`. Em produção, `COOKIE_SECURE=true` e um `CSRF_SECRET` aleatório de pelo menos 32 caracteres fornecido pelo ambiente são obrigatórios. O backend se recusa a iniciar com cookie inseguro em produção.
+
+O frontend mantém o token CSRF somente em memória, envia cookies com `credentials: include` e não armazena sessão em `localStorage` ou `sessionStorage`.
 
 ## Desenvolvimento
 
@@ -167,6 +185,23 @@ GET   /notificacoes/nao-lidas/contagem
 PATCH /notificacoes/:id/ler
 PATCH /notificacoes/ler-todas
 ```
+
+As notificações são restritas ao perfil `ADMIN`.
+
+## API de autenticação e usuários
+
+```text
+GET   /auth/csrf
+POST  /auth/login
+GET   /auth/me
+POST  /auth/logout
+GET   /usuarios
+POST  /usuarios
+PATCH /usuarios/:id/status
+PATCH /usuarios/:id/senha
+```
+
+Somente `/health`, `/auth/csrf` e `/auth/login` são públicos. Rotas mutáveis exigem `Origin` permitido e o cabeçalho `x-csrf-token`. A administração de usuários é exclusiva do `ADMIN`; a API sempre cria novos usuários como `VISUALIZADOR`. Desativar um visualizador ou redefinir sua senha revoga todas as sessões dessa conta. O administrador único não pode ser desativado, ter a função alterada ou a senha redefinida por essas rotas.
 
 `page` e `limit` usam os padrões `1` e `20`, com limite máximo `100`. O filtro `lida` aceita somente `true` ou `false`. A listagem usa `createdAt` decrescente e retorna `data`, `pagination` e a contagem global `unreadCount`. Marcar uma notificação já lida é idempotente; um ID inexistente retorna `404 NOTIFICACAO_NAO_ENCONTRADA`.
 
@@ -426,7 +461,7 @@ Para conferência manual, crie uma planilha **fictícia** com os cabeçalhos aci
 4. Confirme somente o arquivo fictício válido e confira a quantidade na mensagem e a atualização da listagem.
 5. Reenvie o mesmo arquivo: os seriais existentes devem bloquear uma nova importação. Não exclua registros para repetir o teste sem autorização.
 
-Registros de uma confirmação manual permanecem no banco. Não use a planilha real de referência para esse roteiro. A aplicação ainda não tem autenticação: não exponha os endpoints de escrita publicamente sem proteção de acesso externa.
+Registros de uma confirmação manual permanecem no banco. Não use a planilha real de referência para esse roteiro. A importação exige uma sessão de administrador e proteção CSRF válida.
 
 Verificação do checkpoint 3E: 149 testes de backend e 46 de frontend aprovados; os 5 testes dependentes do banco pulados na suíte comum passaram na suíte de integração (6 testes ao todo). Foram exercitados 10.000 registros válidos e 10.000 duplicados, múltiplas abas, fórmulas, proteção, macros, limites ZIP e concorrência. Lint, build, Prisma validate/generate e as 3 migrations existentes passaram; auditorias completas e de produção do backend/frontend reportaram zero vulnerabilidades. Nenhuma fixture permaneceu no MySQL ou como arquivo XLSX no repositório. A revisão visual no navegador não foi realizada porque não havia navegador conectado; os testes da interface usam componentes e respostas HTTP simuladas.
 

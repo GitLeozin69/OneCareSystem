@@ -3,8 +3,9 @@ import { createNotificacaoController } from '../controllers/notificacaoControlle
 export async function notificacaoRoutes(app, { notificacaoService }) {
   const controller = createNotificacaoController(notificacaoService)
 
-  app.get('/', controller.list)
-  app.get('/nao-lidas/contagem', controller.unreadCount)
-  app.patch('/ler-todas', controller.markAllRead)
-  app.patch('/:id/ler', controller.markRead)
+  const adminOnly = { config: { access: 'ADMIN' } }
+  app.get('/', adminOnly, controller.list)
+  app.get('/nao-lidas/contagem', adminOnly, controller.unreadCount)
+  app.patch('/ler-todas', adminOnly, controller.markAllRead)
+  app.patch('/:id/ler', adminOnly, controller.markRead)
 }

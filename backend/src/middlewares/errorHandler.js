@@ -43,6 +43,14 @@ export function errorHandler(error, request, reply) {
     })
   }
 
+  if (error.code === 'FST_CSRF_INVALID_TOKEN' || error.statusCode === 403) {
+    return reply.code(403).send({
+      error: 'CSRF_INVALIDO',
+      message: 'A proteção da sessão expirou. Atualize a página e tente novamente.',
+      details: [],
+    })
+  }
+
   request.log.error(
     { errorName: error.name, errorCode: error.code },
     'Erro interno não tratado',

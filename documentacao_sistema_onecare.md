@@ -938,16 +938,20 @@ Mesmo sendo uma primeira versão simples, seguir boas práticas básicas:
 - Não versionar `.env`.
 - Tratar erros de maneira segura.
 - Separar responsabilidades entre rotas, controllers e services.
-- Preparar o projeto para autenticação futura.
+- Autenticar cada pessoa com uma conta individual.
 - Limitar o tamanho dos arquivos de importação.
 - Validar extensão, tipo e conteúdo das planilhas.
 - Configurar CORS explicitamente para as origens permitidas.
 - Aplicar cabeçalhos HTTP de segurança.
 - Aplicar limitação de requisições, especialmente em endpoints de escrita e importação.
 
-Não implementar autenticação complexa sem necessidade nesta primeira versão.
+A Etapa 7A utiliza dois perfis: `ADMIN` e `VISUALIZADOR`. Existe exatamente um administrador, criado somente pelo comando interativo `npm.cmd --prefix backend run admin:create`; não existem credenciais padrão nem cadastro público. O administrador cria e gerencia visualizadores. Visualizadores podem consultar dashboard, equipamentos ativos, vencidos, arquivados e histórico, mas não podem cadastrar, editar, arquivar, restaurar, importar, acessar notificações internas ou administrar usuários.
 
-A V1 será executada sem autenticação de usuários. As validações, o CORS, os cabeçalhos de segurança e a limitação de requisições reduzem riscos técnicos, mas não substituem controle de acesso. Enquanto não houver autenticação, uma implantação web não deve expor publicamente os endpoints de escrita sem uma proteção de acesso fornecida pela plataforma ou pela rede. A autenticação da aplicação permanece como evolução futura.
+As senhas têm de 12 a 128 caracteres e são armazenadas exclusivamente como hash Argon2id. O nome de usuário é normalizado para minúsculas, tem de 3 a 50 caracteres e aceita letras, números, ponto, hífen e sublinhado. O login usa resposta genérica para usuário inexistente, senha incorreta ou conta inativa e limita cinco falhas por combinação segura de IP e usuário normalizado em uma janela de 15 minutos.
+
+As sessões são tokens opacos aleatórios de 32 bytes, enviados somente no cookie `onecare_session` com `HttpOnly`, `SameSite=Strict`, `Path=/`, expiração e `Secure` obrigatório em produção. Apenas SHA-256 do token é persistido em `sessoes`; não são usados JWT, `localStorage` ou `sessionStorage`. Desativação e redefinição de senha de visualizador revogam suas sessões imediatamente.
+
+Toda operação `POST`, `PATCH`, `PUT` ou `DELETE` exige token CSRF no cabeçalho `x-csrf-token` e validação da origem contra `FRONTEND_ORIGIN`. O CORS permite credenciais somente para origens explícitas. Em produção, o backend exige `COOKIE_SECURE=true` e `CSRF_SECRET` externo com pelo menos 32 caracteres. Logs não devem conter senhas, cookies, tokens, cabeçalhos de autenticação nem URL do banco.
 
 ## 27. Interface
 
@@ -1138,8 +1142,18 @@ Implementar futuramente, somente após autorização explícita:
 - configuração do provedor e destinatários;
 - regras de entrega, tentativas e observabilidade.
 
-### Etapa 7 — Refinamento
-Melhorar:
+### Etapa 7A — Autenticação e controle de acesso
+Implementado:
+- contas individuais com perfis `ADMIN` e `VISUALIZADOR`;
+- administrador único criado por CLI segura;
+- login, restauração de sessão, logout e proteção CSRF;
+- sessões opacas persistentes e revogáveis no MySQL;
+- autorização central no backend e interface adaptada ao perfil;
+- administração de visualizadores, ativação, desativação e redefinição de senha;
+- limitação de tentativas de login e CORS com origem explícita.
+
+### Etapa 7B — Refinamento futuro
+Melhorar, somente após autorização:
 - interface;
 - responsividade;
 - tratamento de erros;
@@ -1210,9 +1224,6 @@ Ao abrir o projeto pela primeira vez, utilizar uma instrução semelhante à seg
 
 Estas funcionalidades podem ser consideradas posteriormente, mas não devem ser implementadas na primeira versão sem autorização:
 
-- autenticação de usuários;
-- níveis de acesso;
-- múltiplos usuários;
 - histórico completo de alterações;
 - exportação para Excel;
 - exportação para PDF;

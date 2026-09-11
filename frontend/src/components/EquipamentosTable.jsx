@@ -46,11 +46,10 @@ export default function EquipamentosTable({
               <td className="px-5 py-5">
                 <div className="flex gap-2">
                   <Button disabled={Boolean(busyId)} onClick={() => onView(item)} aria-label={`Ver detalhes de ${item.serialNumber}`}>Detalhes</Button>
-                  {!archived && <Button disabled={Boolean(busyId)} onClick={() => onEdit(item)} aria-label={`Editar ${item.serialNumber}`}>Editar</Button>}
+                  {!archived && onEdit && <Button disabled={Boolean(busyId)} onClick={() => onEdit(item)} aria-label={`Editar ${item.serialNumber}`}>Editar</Button>}
                   <Button disabled={Boolean(busyId)} onClick={() => onHistory(item)} aria-label={`Ver histórico de ${item.serialNumber}`}>Ver histórico</Button>
-                  {archived
-                    ? <Button disabled={Boolean(busyId)} onClick={() => onRestore(item)} aria-label={`Restaurar ${item.serialNumber}`}>{busyId === item.id ? 'Restaurando…' : 'Restaurar'}</Button>
-                    : <Button disabled={Boolean(busyId)} onClick={() => onArchive(item)} aria-label={`Arquivar ${item.serialNumber}`}>{busyId === item.id ? 'Arquivando…' : 'Arquivar'}</Button>}
+                  {archived && onRestore && <Button disabled={Boolean(busyId)} onClick={() => onRestore(item)} aria-label={`Restaurar ${item.serialNumber}`}>{busyId === item.id ? 'Restaurando…' : 'Restaurar'}</Button>}
+                  {!archived && onArchive && <Button disabled={Boolean(busyId)} onClick={() => onArchive(item)} aria-label={`Arquivar ${item.serialNumber}`}>{busyId === item.id ? 'Arquivando…' : 'Arquivar'}</Button>}
                 </div>
               </td>
             </tr>

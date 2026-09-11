@@ -1,9 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
-import App from '../src/App.jsx'
+import OneCareApp from '../src/App.jsx'
 import EquipamentoDetalhes from '../src/components/EquipamentoDetalhes.jsx'
 import OnecareStatus from '../src/components/OnecareStatus.jsx'
 import { formatRemainingDays } from '../src/utils/equipamento.js'
+
+const App = () => <OneCareApp initialUser={{ id: 1, username: 'admin', role: 'ADMIN', ativo: true }} />
 
 const items = [
   {

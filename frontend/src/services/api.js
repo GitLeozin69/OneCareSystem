@@ -21,6 +21,17 @@ const messages = {
   IMPORTACAO_CONFLITO: 'Conflito na confirmação. Nenhum equipamento foi importado; valide novamente.',
   IMPORTACAO_OCUPADA: 'Há importações em andamento. Tente novamente em instantes.',
   NOTIFICACAO_NAO_ENCONTRADA: 'Notificação não encontrada.',
+  CREDENCIAIS_INVALIDAS: 'Usuário ou senha inválidos.',
+  LIMITE_LOGIN: 'Muitas tentativas. Aguarde 15 minutos e tente novamente.',
+  NAO_AUTENTICADO: 'Sua sessão expirou. Entre novamente.',
+  ACESSO_NEGADO: 'Você não tem permissão para realizar esta ação.',
+  ORIGEM_NAO_PERMITIDA: 'A origem da solicitação não foi permitida.',
+  CSRF_INVALIDO: 'A proteção da sessão expirou. Atualize a página e tente novamente.',
+  USERNAME_INVALIDO: 'Use de 3 a 50 caracteres: letras, números, ponto, hífen ou sublinhado.',
+  SENHA_INVALIDA: 'A senha deve ter de 12 a 128 caracteres.',
+  USERNAME_DUPLICADO: 'Já existe um usuário com esse nome.',
+  USUARIO_NAO_ENCONTRADO: 'Usuário não encontrado.',
+  OPERACAO_NAO_PERMITIDA: 'Esta operação não é permitida.',
 }
 
 export class ApiError extends Error {
@@ -40,14 +51,29 @@ const editableFields = new Set([
   'dataUltimaConferencia',
 ])
 
-async function request(path, { signal, method = 'GET', body } = {}) {
+let csrfToken = ''
+let onUnauthorized = () => {}
+let onForbidden = () => {}
+
+export function configureApiSecurity(config = {}) {
+  if ('csrfToken' in config) csrfToken = config.csrfToken ?? ''
+  if (config.onUnauthorized) onUnauthorized = config.onUnauthorized
+  if (config.onForbidden) onForbidden = config.onForbidden
+}
+
+async function request(path, { signal, method = 'GET', body, suppressAuthEvents = false } = {}) {
   let response
   const multipart = body instanceof FormData
+  const mutating = ['POST', 'PATCH', 'PUT', 'DELETE'].includes(method)
+  const headers = {}
+  if (body && !multipart) headers['Content-Type'] = 'application/json'
+  if (mutating && csrfToken) headers['x-csrf-token'] = csrfToken
   try {
     response = await fetch(`/api${path}`, {
       method,
       signal,
-      headers: body && !multipart ? { 'Content-Type': 'application/json' } : undefined,
+      credentials: 'include',
+      headers: Object.keys(headers).length ? headers : undefined,
       body: multipart ? body : body ? JSON.stringify(body) : undefined,
     })
   } catch (error) {
@@ -68,10 +94,26 @@ async function request(path, { signal, method = 'GET', body } = {}) {
     }
     if (code === 'SERIAL_DUPLICADO') fields.serialNumber = message
     if (code === 'PATRIMONIO_DUPLICADO') fields.patrimonio = message
+    if (!suppressAuthEvents && response.status === 401) onUnauthorized()
+    if (!suppressAuthEvents && response.status === 403) onForbidden()
     throw new ApiError(message, { code, status: response.status, fields,
       details: messages[code] && Array.isArray(data?.details) ? data.details : [] })
   }
   return data
+}
+
+export const authApi = {
+  csrf(signal) { return request('/auth/csrf', { signal, suppressAuthEvents: true }) },
+  login(payload) { return request('/auth/login', { method: 'POST', body: payload, suppressAuthEvents: true }) },
+  me(signal) { return request('/auth/me', { signal, suppressAuthEvents: true }) },
+  logout() { return request('/auth/logout', { method: 'POST', suppressAuthEvents: true }) },
+}
+
+export const usuariosApi = {
+  list(signal) { return request('/usuarios', { signal }) },
+  create(payload) { return request('/usuarios', { method: 'POST', body: payload }) },
+  setStatus(id, ativo) { return request(`/usuarios/${encodeURIComponent(id)}/status`, { method: 'PATCH', body: { ativo } }) },
+  resetPassword(id, password) { return request(`/usuarios/${encodeURIComponent(id)}/senha`, { method: 'PATCH', body: { password } }) },
 }
 
 export const equipamentosApi = {

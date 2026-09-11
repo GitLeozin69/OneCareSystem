@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import App from '../src/App.jsx'
+import OneCareApp from '../src/App.jsx'
 import { formatDate, prepareEquipment, toFormValues } from '../src/utils/equipamento.js'
+
+const App = () => <OneCareApp initialUser={{ id: 1, username: 'admin', role: 'ADMIN', ativo: true }} />
 
 const item = {
   id: 1, serialNumber: 'SN001', partNumber: 'PN / 01', cliente: 'Cliente Teste',

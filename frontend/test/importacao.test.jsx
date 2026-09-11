@@ -1,8 +1,10 @@
 import { beforeEach, afterEach, expect, it, vi } from 'vitest'
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
-import App from '../src/App.jsx'
+import OneCareApp from '../src/App.jsx'
 import ImportacaoExcel from '../src/components/ImportacaoExcel.jsx'
 import { workbook } from '../../backend/test/helpers/excelFixture.js'
+
+const App = () => <OneCareApp initialUser={{ id: 1, username: 'admin', role: 'ADMIN', ativo: true }} />
 
 const xlsx = await workbook()
 const testFile = (name = 'ficticia.xlsx') => new File([xlsx], name, { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })

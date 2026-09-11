@@ -5,17 +5,26 @@ import { createEquipamentoService } from './services/equipamentoService.js'
 import { createImportacaoService } from './services/importacaoService.js'
 import { startNotificacaoScheduler } from './services/notificacaoScheduler.js'
 import { createNotificacaoService } from './services/notificacaoService.js'
+import { createAuthService } from './services/authService.js'
+import { createUsuarioService } from './services/usuarioService.js'
+import { readSecurityConfig } from './plugins/security.js'
 
 const prisma = createPrismaClient()
+const securityConfig = readSecurityConfig()
 const equipamentoService = createEquipamentoService({ prisma })
 const dashboardService = createDashboardService({ prisma })
 const notificacaoService = createNotificacaoService({ prisma })
+const authService = createAuthService({ prisma, sessionDurationHours: securityConfig.sessionDurationHours })
+const usuarioService = createUsuarioService({ prisma })
 const app = buildApp({
   logger: true,
   dashboardService,
   equipamentoService,
   importacaoService: createImportacaoService({ prisma }),
   notificacaoService,
+  authService,
+  usuarioService,
+  securityConfig,
 })
 const host = process.env.HOST ?? '0.0.0.0'
 const port = Number.parseInt(process.env.PORT ?? '3000', 10)
@@ -46,6 +55,6 @@ try {
     run: () => runNotificacaoRoutine('daily'),
   })
 } catch (error) {
-  app.log.error(error)
+  app.log.error({ errorName: error.name, errorCode: error.code }, 'Falha ao iniciar o backend')
   process.exit(1)
 }

@@ -21,7 +21,7 @@ const sortOptions = [
   ['dataInicioOnecare', 'Início do OneCare'], ['dataFimOnecare', 'Término do OneCare'],
 ]
 
-export default function Equipamentos({ initialMode = 'active', initialStatus = '' }) {
+export default function Equipamentos({ initialMode = 'active', initialStatus = '', canManage = true }) {
   const [mode, setMode] = useState(initialMode)
   const [queries, setQueries] = useState({
     active: { ...defaultQuery, status: initialStatus },
@@ -138,7 +138,7 @@ export default function Equipamentos({ initialMode = 'active', initialStatus = '
       <EquipamentoDetalhes
         equipamento={view.item}
         onBack={() => setView(null)}
-        onEdit={() => setView({ type: 'form', item: view.item })}
+        onEdit={canManage ? () => setView({ type: 'form', item: view.item }) : undefined}
         onHistory={() => setView({ type: 'history', item: view.item, returnView: view })}
       />
     )
@@ -180,13 +180,13 @@ export default function Equipamentos({ initialMode = 'active', initialStatus = '
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
-          {!archived && !expired && <Button onClick={() => { setNotice(''); setView({ type: 'import' }) }}>Importar Excel</Button>}
+          {canManage && !archived && !expired && <Button onClick={() => { setNotice(''); setView({ type: 'import' }) }}>Importar Excel</Button>}
           {!expired && <Button onClick={() => switchMode('expired')}>Equipamentos vencidos</Button>}
           {expired && <Button onClick={() => switchMode('active')}>← Voltar aos equipamentos</Button>}
           <Button onClick={() => switchMode(archived ? 'active' : 'archived')}>
             {archived ? '← Voltar aos equipamentos' : 'Equipamentos arquivados'}
           </Button>
-          {!archived && !expired && (
+          {canManage && !archived && !expired && (
             <Button variant="primary" onClick={() => {
               setNotice('')
               setView({ type: 'form' })
@@ -268,11 +268,11 @@ export default function Equipamentos({ initialMode = 'active', initialStatus = '
                   items={result.data}
                   archived={archived}
                   busyId={busyId}
-                  onEdit={(item) => { setNotice(''); setView({ type: 'form', item }) }}
+                  onEdit={canManage ? (item) => { setNotice(''); setView({ type: 'form', item }) } : undefined}
                   onView={(item) => setView({ type: 'details', item })}
                   onHistory={(item) => setView({ type: 'history', item })}
-                  onArchive={(item) => runArchiveAction(item, 'archive')}
-                  onRestore={(item) => runArchiveAction(item, 'restore')}
+                  onArchive={canManage ? (item) => runArchiveAction(item, 'archive') : undefined}
+                  onRestore={canManage ? (item) => runArchiveAction(item, 'restore') : undefined}
                 />
               ) : <div className="border-t border-slate-100 px-6 py-16 text-center" role="status"><p className="font-semibold">{query.q ? 'Nenhum resultado encontrado' : archived ? 'Nenhum equipamento arquivado' : expired ? 'Nenhum equipamento vencido encontrado.' : query.status ? `Nenhum equipamento com status ${selectedStatusLabel}` : 'Nenhum equipamento nesta página'}</p><p className="mt-2 text-sm text-slate-500">{query.q ? 'Tente outro termo ou limpe a pesquisa.' : archived ? 'Os equipamentos arquivados aparecerão aqui.' : expired ? 'Não há contratos vencidos na listagem operacional.' : query.status ? 'Selecione outro status ou escolha “Todos”.' : pagination.total === 0 ? 'Use “Novo equipamento” para fazer o primeiro cadastro.' : 'Volte para uma página anterior.'}</p></div>}
         </div>

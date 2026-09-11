@@ -6,6 +6,39 @@ datasource db {
   provider = "mysql"
 }
 
+enum UserRole {
+  ADMIN
+  VISUALIZADOR
+}
+
+model Usuario {
+  id            Int        @id @default(autoincrement())
+  username      String     @unique(map: "uq_usuarios_username") @db.VarChar(50)
+  senhaHash     String     @map("senha_hash") @db.VarChar(255)
+  role          UserRole   @default(VISUALIZADOR)
+  ativo         Boolean    @default(true)
+  adminSlot     Int?       @unique(map: "uq_usuarios_admin_slot") @map("admin_slot") @db.TinyInt
+  ultimoLoginEm DateTime?  @map("ultimo_login_em") @db.DateTime(0)
+  createdAt     DateTime   @default(now()) @map("created_at") @db.DateTime(0)
+  updatedAt     DateTime   @updatedAt @map("updated_at") @db.DateTime(0)
+  sessoes       Sessao[]
+
+  @@map("usuarios")
+}
+
+model Sessao {
+  id         Int      @id @default(autoincrement())
+  usuarioId  Int      @map("usuario_id")
+  tokenHash  String   @unique(map: "uq_sessoes_token_hash") @map("token_hash") @db.Char(64)
+  expiresAt  DateTime @map("expires_at") @db.DateTime(0)
+  createdAt  DateTime @default(now()) @map("created_at") @db.DateTime(0)
+  usuario    Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade, map: "fk_sessoes_usuario")
+
+  @@index([usuarioId], map: "idx_sessoes_usuario")
+  @@index([expiresAt], map: "idx_sessoes_expires_at")
+  @@map("sessoes")
+}
+
 model Equipamento {
   id                    Int                 @id @default(autoincrement())
   serialNumber          String              @unique(map: "uq_equipamentos_serial_number") @map("serial_number") @db.VarChar(100)

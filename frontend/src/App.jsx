@@ -2,9 +2,14 @@ import { useCallback, useEffect, useState } from 'react'
 import Dashboard from './pages/Dashboard.jsx'
 import Equipamentos from './pages/Equipamentos.jsx'
 import Notificacoes from './pages/Notificacoes.jsx'
+import Login from './pages/Login.jsx'
+import Usuarios from './pages/Usuarios.jsx'
 import { notificacoesApi } from './services/api.js'
+import { AuthProvider } from './auth/AuthContext.jsx'
+import { useAuth } from './auth/authState.js'
 
-function App() {
+function AppContent() {
+  const { user, loading, notice, logout } = useAuth()
   const [destination, setDestination] = useState({ page: 'equipamentos' })
   const [unreadCount, setUnreadCount] = useState(0)
 
@@ -13,16 +18,21 @@ function App() {
   }, [])
 
   useEffect(() => {
+    if (user?.role !== 'ADMIN') return undefined
     const controller = new AbortController()
     notificacoesApi.unreadCount(controller.signal)
       .then(({ unreadCount: count }) => updateUnreadCount(count))
       .catch(() => {})
     return () => controller.abort()
-  }, [updateUnreadCount])
+  }, [updateUnreadCount, user?.role])
 
   function showEquipamentos(mode = 'active', status = '') {
     setDestination({ page: 'equipamentos', mode, status })
   }
+
+  if (loading) return <main className="grid min-h-screen place-items-center"><p role="status">Verificando sessão…</p></main>
+  if (!user) return <Login />
+  const admin = user.role === 'ADMIN'
 
   return (
     <>
@@ -34,17 +44,24 @@ function App() {
           <nav aria-label="Navegação principal" className="flex gap-2">
             <button type="button" className="btn btn-secondary" aria-current={destination.page === 'dashboard' ? 'page' : undefined} onClick={() => setDestination({ page: 'dashboard' })}>Dashboard</button>
             <button type="button" className="btn btn-secondary" aria-current={destination.page === 'equipamentos' ? 'page' : undefined} onClick={() => showEquipamentos()}>Equipamentos</button>
-            <button type="button" className="btn btn-secondary gap-2" aria-current={destination.page === 'notificacoes' ? 'page' : undefined} aria-label={`Notificações, ${unreadCount} não lida${unreadCount === 1 ? '' : 's'}`} onClick={() => setDestination({ page: 'notificacoes' })}><span aria-hidden="true">🔔</span> Notificações {unreadCount > 0 && <span className="rounded-full bg-red-700 px-2 py-0.5 text-xs text-white">{unreadCount}</span>}</button>
+            {admin && <button type="button" className="btn btn-secondary gap-2" aria-current={destination.page === 'notificacoes' ? 'page' : undefined} aria-label={`Notificações, ${unreadCount} não lida${unreadCount === 1 ? '' : 's'}`} onClick={() => setDestination({ page: 'notificacoes' })}><span aria-hidden="true">🔔</span> Notificações {unreadCount > 0 && <span className="rounded-full bg-red-700 px-2 py-0.5 text-xs text-white">{unreadCount}</span>}</button>}
+            {admin && <button type="button" className="btn btn-secondary" aria-current={destination.page === 'usuarios' ? 'page' : undefined} onClick={() => setDestination({ page: 'usuarios' })}>Usuários</button>}
+            <span className="self-center px-2 text-xs text-slate-600">{user.username} · {admin ? 'Administrador' : 'Visualizador'}</span>
+            <button type="button" className="btn btn-secondary" onClick={logout}>Sair</button>
           </nav>
         </div>
       </header>
       <main id="main" className="mx-auto max-w-[1440px] px-5 py-8 sm:px-10 sm:py-10">
+        {notice && <p role="status" className="mb-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">{notice}</p>}
         {destination.page === 'dashboard' && <Dashboard onNavigate={showEquipamentos} />}
-        {destination.page === 'equipamentos' && <Equipamentos key={`${destination.mode}-${destination.status}`} initialMode={destination.mode} initialStatus={destination.status} />}
-        {destination.page === 'notificacoes' && <Notificacoes onUnreadCountChange={updateUnreadCount} />}
+        {destination.page === 'equipamentos' && <Equipamentos canManage={admin} key={`${destination.mode}-${destination.status}`} initialMode={destination.mode} initialStatus={destination.status} />}
+        {admin && destination.page === 'notificacoes' && <Notificacoes onUnreadCountChange={updateUnreadCount} />}
+        {admin && destination.page === 'usuarios' && <Usuarios />}
       </main>
     </>
   )
 }
 
-export default App
+export default function App({ initialUser }) {
+  return <AuthProvider initialUser={initialUser}><AppContent /></AuthProvider>
+}
