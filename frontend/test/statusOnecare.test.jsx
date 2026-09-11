@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import App from '../src/App.jsx'
+import EquipamentoDetalhes from '../src/components/EquipamentoDetalhes.jsx'
 import OnecareStatus from '../src/components/OnecareStatus.jsx'
 import { formatRemainingDays } from '../src/utils/equipamento.js'
 
@@ -183,10 +184,20 @@ describe('Tela de equipamentos vencidos', () => {
     expect(await screen.findByRole('heading', { name: 'Equipamentos vencidos' })).toBeTruthy()
     expect(lastParams().get('status')).toBe('VENCIDO')
     expect(screen.getByText('05/09/2026')).toBeTruthy()
+    expect(screen.queryByRole('columnheader', { name: 'Início do OneCare' })).toBeNull()
     expect(screen.queryByText('ATIVO001')).toBeNull()
     click('Ver detalhes de VENCIDO001')
     const heading = screen.getByRole('heading', { name: 'VENCIDO001' })
-    expect(within(heading.closest('section')).getByText('OC-C')).toBeTruthy()
+    const details = heading.closest('section')
+    expect(within(details).getByText('OC-C')).toBeTruthy()
+    expect(within(details).getByText('Início do OneCare')).toBeTruthy()
+    expect(within(details).getByText('01/01/2025')).toBeTruthy()
+  })
+
+  it('mostra início não informado nos detalhes quando o valor está ausente', () => {
+    render(<EquipamentoDetalhes equipamento={{ ...items[0], dataInicioOnecare: null }} onBack={() => {}} />)
+    const label = screen.getByText('Início do OneCare')
+    expect(label.nextElementSibling.textContent).toBe('Não informado')
   })
 
   it('pesquisa, ordena e pagina sempre com status VENCIDO', async () => {

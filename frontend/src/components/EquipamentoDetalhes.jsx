@@ -16,7 +16,8 @@ export default function EquipamentoDetalhes({ equipamento, onBack, onEdit, onHis
     ['Patrimônio', text(equipamento.patrimonio)],
     ['Nota fiscal', text(equipamento.notaFiscal)],
     ['Contrato OneCare', text(equipamento.contratoOnecare)],
-    ['Início do OneCare', formatDate(equipamento.dataInicioOnecare)],
+    ['Início do OneCare', equipamento.dataInicioOnecare
+      ? formatDate(equipamento.dataInicioOnecare) : 'Não informado'],
     ['Término do OneCare', formatDate(equipamento.dataFimOnecare)],
     ['Última conferência', formatDate(equipamento.dataUltimaConferencia)],
   ]

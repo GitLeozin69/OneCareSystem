@@ -15,7 +15,7 @@ export default function EquipamentosTable({
   const headings = [
     'Serial', 'Part number', 'Cliente', 'Distribuidor', 'Patrimônio',
     'Nota fiscal', 'Contrato OneCare',
-    'Início do OneCare', 'Término do OneCare',
+    'Término do OneCare',
     ...(!archived ? ['Status e prazo'] : []),
     ...(archived ? ['Data do arquivamento'] : []),
     'Ações',
@@ -40,7 +40,6 @@ export default function EquipamentosTable({
               <td className="max-w-48 break-words px-5 py-5 text-slate-600">{item.patrimonio || '—'}</td>
               <td className="max-w-48 break-words px-5 py-5 text-slate-600">{item.notaFiscal || '—'}</td>
               <td className="max-w-48 break-words px-5 py-5 text-slate-600">{item.contratoOnecare || '—'}</td>
-              <td className="whitespace-nowrap px-5 py-5 tabular-nums">{formatDate(item.dataInicioOnecare)}</td>
               <td className="whitespace-nowrap px-5 py-5 tabular-nums">{formatDate(item.dataFimOnecare)}</td>
               {!archived && <td className="px-5 py-5"><OnecareStatus status={item.statusOnecare} diasRestantes={item.diasRestantes} /></td>}
               {archived && <td className="whitespace-nowrap px-5 py-5 tabular-nums">{formatDateTime(item.arquivadoEm)}</td>}
