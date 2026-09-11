@@ -2,7 +2,7 @@
 
 Sistema web para controle de equipamentos vinculados a contratos OneCare.
 
-O projeto está na Etapa 4A: além dos recursos de equipamentos e importação Excel da Etapa 3E, o backend calcula e filtra o status da cobertura OneCare. A apresentação do status no frontend, a tela de vencidos, o dashboard e as notificações ainda não estão implementados.
+O projeto está na Etapa 4B: o backend calcula e filtra o status da cobertura OneCare, e o frontend apresenta esses dados na listagem e na tela de equipamentos vencidos. Dashboard e notificações ainda não estão implementados.
 
 ## Tecnologias
 
@@ -118,6 +118,10 @@ As datas da tabela são exibidas em `DD/MM/AAAA`. Os formulários usam controles
 
 “Ver histórico” está disponível na listagem e na edição, para equipamentos ativos ou arquivados. A visualização mostra os valores anterior e novo de cada alteração contratual, do evento mais recente para o mais antigo, com paginação. Datas contratuais usam `DD/MM/AAAA`; o instante da substituição é apresentado no fuso `America/Fortaleza`.
 
+A listagem operacional mostra o indicador textual `Ativo`, `Vencendo`, `Vencido` ou `Sem data de término`, acompanhado exclusivamente de `diasRestantes` recebido da API (`Vence em X dias`, `Vence hoje`, `Vencido há X dias` ou `Prazo não informado`). As cores reforçam o estado, mas o texto permanece visível e acessível. O frontend não calcula status, prazo ou fuso.
+
+O filtro “Status OneCare” consulta o backend com `status=ATIVO`, `VENCENDO` ou `VENCIDO`; “Todos” remove o parâmetro. Alterar o filtro volta à página 1 e preserva pesquisa, limite e ordenação. “Equipamentos vencidos” abre uma tela específica que sempre consulta `GET /equipamentos?status=VENCIDO`, com pesquisa, paginação, ordenação, detalhes, edição, histórico e arquivamento. Equipamentos arquivados permanecem em sua área separada.
+
 ### Roteiro manual
 
 1. Inicie backend e frontend nos dois terminais acima e abra `http://127.0.0.1:5173`.
@@ -129,6 +133,8 @@ As datas da tabela são exibidas em `DD/MM/AAAA`. Os formulários usam controles
 7. Durante salvamento, arquivamento ou restauração, confirme que os controles não permitem ações repetidas. Cancele um formulário e confira que os filtros continuam iguais.
 8. Pare o backend, faça uma pesquisa e confira o erro. Reinicie-o e use “Tentar novamente”.
 9. Use Tab/Enter para navegar e teste em janela estreita: formulário em uma coluna, botões acessíveis e tabela com rolagem horizontal.
+10. Confira os quatro indicadores de status e suas frases de prazo; alterne o filtro e confirme que pesquisa e ordenação permanecem.
+11. Abra “Equipamentos vencidos”, teste pesquisa/paginação/ordenação e edite somente um registro de teste; ao renovar o término, ele deve sair da tela após a nova consulta.
 
 Não altere equipamentos reais para esses testes. Registros criados manualmente permanecem no banco; a interface não realiza exclusão física.
 

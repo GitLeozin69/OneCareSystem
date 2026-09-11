@@ -89,6 +89,7 @@ export const equipamentosApi = {
       page: query.page, limit: query.limit, sortBy: query.sortBy, order: query.order,
     })
     if (query.q) params.set('q', query.q)
+    if (query.status) params.set('status', query.status)
     return request(`/equipamentos?${params}`, { signal })
   },
   listArchived(query, signal) {

@@ -1,5 +1,6 @@
 import { formatDate, formatDateTime } from '../utils/equipamento.js'
 import Button from './Button.jsx'
+import OnecareStatus from './OnecareStatus.jsx'
 
 export default function EquipamentosTable({
   items,
@@ -9,11 +10,13 @@ export default function EquipamentosTable({
   onEdit,
   onHistory,
   onRestore,
+  onView,
 }) {
   const headings = [
     'Serial', 'Part number', 'Cliente', 'Distribuidor', 'Patrimônio',
     'Nota fiscal', 'Contrato OneCare',
     'Início do OneCare', 'Término do OneCare',
+    ...(!archived ? ['Status e prazo'] : []),
     ...(archived ? ['Data do arquivamento'] : []),
     'Ações',
   ]
@@ -39,9 +42,11 @@ export default function EquipamentosTable({
               <td className="max-w-48 break-words px-5 py-5 text-slate-600">{item.contratoOnecare || '—'}</td>
               <td className="whitespace-nowrap px-5 py-5 tabular-nums">{formatDate(item.dataInicioOnecare)}</td>
               <td className="whitespace-nowrap px-5 py-5 tabular-nums">{formatDate(item.dataFimOnecare)}</td>
+              {!archived && <td className="px-5 py-5"><OnecareStatus status={item.statusOnecare} diasRestantes={item.diasRestantes} /></td>}
               {archived && <td className="whitespace-nowrap px-5 py-5 tabular-nums">{formatDateTime(item.arquivadoEm)}</td>}
               <td className="px-5 py-5">
                 <div className="flex gap-2">
+                  <Button disabled={Boolean(busyId)} onClick={() => onView(item)} aria-label={`Ver detalhes de ${item.serialNumber}`}>Detalhes</Button>
                   {!archived && <Button disabled={Boolean(busyId)} onClick={() => onEdit(item)} aria-label={`Editar ${item.serialNumber}`}>Editar</Button>}
                   <Button disabled={Boolean(busyId)} onClick={() => onHistory(item)} aria-label={`Ver histórico de ${item.serialNumber}`}>Ver histórico</Button>
                   {archived

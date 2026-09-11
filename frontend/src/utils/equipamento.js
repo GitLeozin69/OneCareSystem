@@ -38,6 +38,15 @@ export function formatDateTime(value) {
   return `${parts.day}/${parts.month}/${parts.year} às ${parts.hour}:${parts.minute}`
 }
 
+export function formatRemainingDays(value) {
+  if (!Number.isInteger(value)) return 'Prazo não informado'
+  if (value > 1) return `Vence em ${value} dias`
+  if (value === 1) return 'Vence em 1 dia'
+  if (value === 0) return 'Vence hoje'
+  if (value === -1) return 'Vencido há 1 dia'
+  return `Vencido há ${Math.abs(value)} dias`
+}
+
 function validDate(value) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
   const [year, month, day] = value.split('-').map(Number)

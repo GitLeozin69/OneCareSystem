@@ -345,6 +345,10 @@ O histórico de contratos pode ser aberto na listagem ou na edição e funciona 
 
 No checkpoint 3D.1, nota fiscal e distribuidor passam a integrar cadastro, edição, consulta e listagens ativa e de arquivados. Esses campos não fazem parte do histórico contratual. A tabela permanece responsiva por meio de rolagem horizontal.
 
+Na Etapa 4B, a listagem operacional apresenta o status textual e os dias restantes fornecidos pelo backend. `Ativo`, `Vencendo`, `Vencido` e `Sem data de término` possuem indicadores visuais distintos sem depender apenas de cor. As frases de prazo são `Vence em X dias`, `Vence hoje`, `Vencido há X dias` e `Prazo não informado`. O frontend não recalcula esses valores.
+
+O filtro visual envia `status` ao backend, volta à primeira página e preserva pesquisa, limite e ordenação. A opção `Todos` remove o parâmetro. A tela `Equipamentos vencidos` reutiliza a listagem com `status=VENCIDO`, oferecendo pesquisa, paginação, ordenação, detalhes, edição, histórico e arquivamento; os arquivados continuam separados.
+
 Além da listagem principal, criar uma visualização ou filtro específico chamado `Vencidos`, contendo os equipamentos cujo OneCare já terminou.
 
 A tabela deve permitir visualizar, no mínimo:

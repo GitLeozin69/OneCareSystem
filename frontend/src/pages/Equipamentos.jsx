@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import Button from '../components/Button.jsx'
+import EquipamentoDetalhes from '../components/EquipamentoDetalhes.jsx'
 import EquipamentoForm from '../components/EquipamentoForm.jsx'
 import EquipamentosTable from '../components/EquipamentosTable.jsx'
 import HistoricoContratos from '../components/HistoricoContratos.jsx'
@@ -9,6 +10,9 @@ import { equipamentosApi } from '../services/api.js'
 const defaultQuery = {
   q: '', page: 1, limit: 20, sortBy: 'createdAt', order: 'desc',
 }
+const statusOptions = [
+  ['', 'Todos'], ['ATIVO', 'Ativos'], ['VENCENDO', 'Vencendo'], ['VENCIDO', 'Vencidos'],
+]
 const sortOptions = [
   ['createdAt', 'Data de cadastro'], ['updatedAt', 'Última atualização'],
   ['serialNumber', 'Serial'], ['partNumber', 'Part number'], ['cliente', 'Cliente'],
@@ -20,10 +24,11 @@ const sortOptions = [
 export default function Equipamentos() {
   const [mode, setMode] = useState('active')
   const [queries, setQueries] = useState({
-    active: defaultQuery,
-    archived: defaultQuery,
+    active: { ...defaultQuery, status: '' },
+    expired: { ...defaultQuery, status: 'VENCIDO' },
+    archived: { ...defaultQuery },
   })
-  const [searches, setSearches] = useState({ active: '', archived: '' })
+  const [searches, setSearches] = useState({ active: '', expired: '', archived: '' })
   const [view, setView] = useState(null)
   const [revision, setRevision] = useState(0)
   const [notice, setNotice] = useState('')
@@ -128,6 +133,17 @@ export default function Equipamentos() {
     )
   }
 
+  if (view?.type === 'details') {
+    return (
+      <EquipamentoDetalhes
+        equipamento={view.item}
+        onBack={() => setView(null)}
+        onEdit={() => setView({ type: 'form', item: view.item })}
+        onHistory={() => setView({ type: 'history', item: view.item, returnView: view })}
+      />
+    )
+  }
+
   if (view?.type === 'form') {
     return (
       <EquipamentoForm
@@ -143,6 +159,8 @@ export default function Equipamentos() {
   }
 
   const archived = mode === 'archived'
+  const expired = mode === 'expired'
+  const selectedStatusLabel = statusOptions.find(([value]) => value === query.status)?.[1]
   const result = current?.result
   const pagination = result?.pagination
   return (
@@ -151,20 +169,24 @@ export default function Equipamentos() {
         <div>
           <p className="eyebrow mb-2">GESTÃO ONECARE</p>
           <h1 id="page-title" ref={title} tabIndex={-1} className="text-3xl font-semibold tracking-tight sm:text-4xl">
-            {archived ? 'Equipamentos arquivados' : 'Equipamentos'}
+            {archived ? 'Equipamentos arquivados' : expired ? 'Equipamentos vencidos' : 'Equipamentos'}
           </h1>
           <p className="mt-3 max-w-xl text-sm leading-6 text-slate-600">
             {archived
               ? 'Consulte equipamentos retirados manualmente da operação e restaure-os quando necessário.'
+              : expired
+                ? 'Consulte e atualize equipamentos cuja cobertura OneCare já terminou.'
               : 'Consulte os equipamentos e mantenha os dados de cobertura organizados.'}
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
-          {!archived && <Button onClick={() => { setNotice(''); setView({ type: 'import' }) }}>Importar Excel</Button>}
+          {!archived && !expired && <Button onClick={() => { setNotice(''); setView({ type: 'import' }) }}>Importar Excel</Button>}
+          {!expired && <Button onClick={() => switchMode('expired')}>Equipamentos vencidos</Button>}
+          {expired && <Button onClick={() => switchMode('active')}>← Voltar aos equipamentos</Button>}
           <Button onClick={() => switchMode(archived ? 'active' : 'archived')}>
             {archived ? '← Voltar aos equipamentos' : 'Equipamentos arquivados'}
           </Button>
-          {!archived && (
+          {!archived && !expired && (
             <Button variant="primary" onClick={() => {
               setNotice('')
               setView({ type: 'form' })
@@ -185,7 +207,7 @@ export default function Equipamentos() {
           }}>
             <div className="min-w-48 flex-1">
               <label htmlFor="search" className="field-label">
-                {archived ? 'Pesquisar equipamentos arquivados' : 'Pesquisar equipamentos'}
+                {archived ? 'Pesquisar equipamentos arquivados' : expired ? 'Pesquisar equipamentos vencidos' : 'Pesquisar equipamentos'}
               </label>
               <input
                 id="search"
@@ -205,6 +227,12 @@ export default function Equipamentos() {
             }} disabled={!search && !query.q}>Limpar</Button>
           </form>
           <div className="flex flex-wrap items-end gap-4 border-t border-slate-100 pt-5">
+            {!archived && !expired && <div>
+              <label htmlFor="status" className="field-label">Status OneCare</label>
+              <select id="status" className="input" value={query.status} onChange={(event) => changeQuery({ status: event.target.value })}>
+                {statusOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+              </select>
+            </div>}
             <div className="min-w-44 flex-1 sm:flex-none">
               <label htmlFor="sortBy" className="field-label">Ordenar por</label>
               <select id="sortBy" className="input" value={query.sortBy} onChange={(event) => changeQuery({ sortBy: event.target.value })}>
@@ -227,12 +255,13 @@ export default function Equipamentos() {
             <p className="pb-2 text-xs text-slate-500 sm:ml-auto">
               {archived
                 ? 'Arquivado é uma retirada manual da operação.'
-                : 'Todos os não arquivados, incluindo contratos vencidos.'}
+                : expired ? 'Filtro do backend: somente contratos vencidos.'
+                  : 'Todos os não arquivados; use o filtro para consultar o status.'}
             </p>
           </div>
         </div>
         <div aria-busy={loading || Boolean(busyId)}>
-          {loading ? <p role="status" className="border-t border-slate-100 px-6 py-16 text-center text-slate-600">Carregando equipamentos…</p>
+          {loading ? <p role="status" className="border-t border-slate-100 px-6 py-16 text-center text-slate-600">{expired ? 'Carregando equipamentos vencidos…' : 'Carregando equipamentos…'}</p>
             : current.error ? <div className="space-y-4 border-t border-slate-100 p-8 text-center"><p role="alert" className="text-red-800">{current.error}</p><Button onClick={() => setRevision((value) => value + 1)}>Tentar novamente</Button></div>
               : result.data.length ? (
                 <EquipamentosTable
@@ -240,13 +269,14 @@ export default function Equipamentos() {
                   archived={archived}
                   busyId={busyId}
                   onEdit={(item) => { setNotice(''); setView({ type: 'form', item }) }}
+                  onView={(item) => setView({ type: 'details', item })}
                   onHistory={(item) => setView({ type: 'history', item })}
                   onArchive={(item) => runArchiveAction(item, 'archive')}
                   onRestore={(item) => runArchiveAction(item, 'restore')}
                 />
-              ) : <div className="border-t border-slate-100 px-6 py-16 text-center" role="status"><p className="font-semibold">{query.q ? 'Nenhum resultado encontrado' : archived ? 'Nenhum equipamento arquivado' : 'Nenhum equipamento nesta página'}</p><p className="mt-2 text-sm text-slate-500">{query.q ? 'Tente outro termo ou limpe a pesquisa.' : archived ? 'Os equipamentos arquivados aparecerão aqui.' : pagination.total === 0 ? 'Use “Novo equipamento” para fazer o primeiro cadastro.' : 'Volte para uma página anterior.'}</p></div>}
+              ) : <div className="border-t border-slate-100 px-6 py-16 text-center" role="status"><p className="font-semibold">{query.q ? 'Nenhum resultado encontrado' : archived ? 'Nenhum equipamento arquivado' : expired ? 'Nenhum equipamento vencido encontrado.' : query.status ? `Nenhum equipamento com status ${selectedStatusLabel}` : 'Nenhum equipamento nesta página'}</p><p className="mt-2 text-sm text-slate-500">{query.q ? 'Tente outro termo ou limpe a pesquisa.' : archived ? 'Os equipamentos arquivados aparecerão aqui.' : expired ? 'Não há contratos vencidos na listagem operacional.' : query.status ? 'Selecione outro status ou escolha “Todos”.' : pagination.total === 0 ? 'Use “Novo equipamento” para fazer o primeiro cadastro.' : 'Volte para uma página anterior.'}</p></div>}
         </div>
-        <nav aria-label={archived ? 'Paginação de equipamentos arquivados' : 'Paginação de equipamentos'} className="flex flex-wrap items-center justify-between gap-4 border-t border-slate-200 bg-slate-50 px-5 py-4 sm:px-6">
+        <nav aria-label={archived ? 'Paginação de equipamentos arquivados' : expired ? 'Paginação de equipamentos vencidos' : 'Paginação de equipamentos'} className="flex flex-wrap items-center justify-between gap-4 border-t border-slate-200 bg-slate-50 px-5 py-4 sm:px-6">
           <p className="text-sm text-slate-600">{pagination ? `${pagination.total} equipamento(s) · Página ${pagination.page} de ${pagination.totalPages}` : 'Aguardando resultados'}</p>
           <div className="flex gap-2">
             <Button disabled={loading || Boolean(busyId) || !pagination || pagination.page <= 1} onClick={() => setQueries((previous) => ({ ...previous, [mode]: { ...previous[mode], page: previous[mode].page - 1 } }))}>← Anterior</Button>
