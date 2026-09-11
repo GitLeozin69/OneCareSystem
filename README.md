@@ -44,6 +44,8 @@ DATABASE_URL="mysql://usuario:senha@127.0.0.1:3306/ZebraOneCare"
 
 O exemplo utiliza valores ilustrativos. Não coloque senhas no README, no `.env.example` ou em qualquer arquivo versionado. Caracteres especiais no usuário ou na senha devem ser codificados para URL.
 
+No desenvolvimento local, o backend troca `localhost` por `127.0.0.1` e habilita automaticamente `allowPublicKeyRetrieval` para autenticação `caching_sha2_password` do MySQL. Essa opção não é habilitada automaticamente para hosts remotos. Ao hospedar o sistema, substitua a `DATABASE_URL` pela fornecida pelo provedor e configure TLS com validação do certificado conforme as instruções da hospedagem; não utilize `rejectUnauthorized=false` em produção.
+
 ## Banco de dados e Prisma
 
 O schema está em `backend/prisma/schema.prisma` e utiliza as tabelas:
