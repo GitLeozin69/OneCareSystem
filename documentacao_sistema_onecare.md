@@ -237,7 +237,7 @@ Essa rotina será responsável por:
 
 Equipamentos arquivados não devem ser processados pela rotina.
 
-A rotina deverá ser executada periodicamente pelo servidor, pelo menos uma vez por dia. A implementação pode utilizar um scheduler/cron apropriado para Node.js.
+A rotina deverá ser executada pelo servidor uma vez por dia, às 08:00 no fuso `America/Fortaleza`.
 
 Na V1, a rotina deverá executar também na inicialização do backend, para que contratos que já estejam dentro da janela de três meses sejam identificados imediatamente. A execução diária será feita pelo próprio backend, considerando inicialmente uma única instância do servidor.
 
@@ -247,9 +247,9 @@ A restrição única das notificações no banco continuará sendo obrigatória.
 
 O sistema deverá identificar contratos próximos do vencimento.
 
-Quando o contrato entrar na janela de 3 meses corridos restantes, o sistema deverá gerar uma notificação.
+Quando o contrato entrar na janela de 3 meses corridos restantes, o sistema deverá gerar uma notificação `ONECARE_VENCENDO`. Quando já estiver vencido, deverá gerar uma notificação distinta `ONECARE_VENCIDO`.
 
-Na primeira execução da rotina, também devem ser notificados todos os equipamentos não arquivados cujo contrato ainda não venceu e termine entre a data atual e o limite de três meses corridos, inclusive. Contratos já vencidos não devem gerar uma notificação do tipo `ONECARE_3_MESES`.
+Na primeira execução da rotina, também devem ser notificados todos os equipamentos não arquivados cujo contrato termine até o limite de três meses corridos, inclusive. Isso abrange tanto contratos na janela `VENCENDO` quanto contratos já `VENCIDO`.
 
 Essa notificação não deve ser criada repetidamente todos os dias.
 
@@ -258,7 +258,7 @@ Deve existir mecanismo para evitar duplicação.
 A chave do evento deve incluir a data de término do contrato. Exemplo:
 
 ```text
-ONECARE_3_MESES:2026-12-15
+ONECARE_VENCENDO:2026-12-15
 ```
 
 Assim, uma renovação poderá gerar uma nova notificação sem duplicar alertas do mesmo vencimento.
@@ -285,18 +285,11 @@ lida
 created_at
 ```
 
-Tipos poderão incluir futuramente:
+Tipos implementados na Etapa 6A:
 
 ```text
-ONECARE_3_MESES
-ONECARE_30_DIAS
+ONECARE_VENCENDO
 ONECARE_VENCIDO
-```
-
-Inicialmente, implementar pelo menos:
-
-```text
-ONECARE_3_MESES
 ```
 
 ### Comportamento
@@ -304,6 +297,10 @@ ONECARE_3_MESES
 - Notificações não devem ser duplicadas para o mesmo evento.
 - O sistema deve possuir endpoint para listar notificações.
 - O sistema deve possuir endpoint para marcar notificação como lida.
+- A chave idempotente combina equipamento, tipo e data de término do contrato.
+- Equipamentos arquivados não geram novos avisos, mas suas notificações anteriores são preservadas.
+- Renovar ou corrigir a data não apaga notificações anteriores e permite um novo evento para a nova data.
+- O envio de notificações por e-mail fica explicitamente reservado para a Etapa 6B.
 
 ## 12. Dashboard
 
@@ -606,12 +603,22 @@ Os corpos e respostas JSON da API devem utilizar propriedades em `camelCase`. Os
 
 Listar notificações:
 ```http
-GET /notificacoes
+GET /notificacoes?page=1&limit=20&lida=false
 ```
 
 Marcar como lida:
 ```http
-PATCH /notificacoes/:id/lida
+PATCH /notificacoes/:id/ler
+```
+
+Consultar a quantidade não lida:
+```http
+GET /notificacoes/nao-lidas/contagem
+```
+
+Marcar todas como lidas:
+```http
+PATCH /notificacoes/ler-todas
 ```
 
 ## 19. API do dashboard
@@ -1117,12 +1124,19 @@ Implementar:
 - indicadores;
 - próximos vencimentos.
 
-### Etapa 6 — Notificações
+### Etapa 6A — Notificações internas
 Implementar:
-- alerta de 3 meses;
-- armazenamento;
-- listagem;
-- marcar como lida.
+- avisos `ONECARE_VENCENDO` e `ONECARE_VENCIDO`;
+- execução na inicialização e diariamente às 08:00 em `America/Fortaleza`;
+- armazenamento idempotente;
+- listagem, filtros, paginação e contagem não lida;
+- marcar uma ou todas como lidas.
+
+### Etapa 6B — Notificações por e-mail
+Implementar futuramente, somente após autorização explícita:
+- envio de avisos por e-mail;
+- configuração do provedor e destinatários;
+- regras de entrega, tentativas e observabilidade.
 
 ### Etapa 7 — Refinamento
 Melhorar:

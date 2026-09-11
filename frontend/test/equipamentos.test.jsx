@@ -30,7 +30,8 @@ afterEach(() => vi.unstubAllGlobals())
 const input = (label, value) => fireEvent.change(screen.getByLabelText(label), { target: { value } })
 const click = (name) => fireEvent.click(screen.getByRole('button', { name }))
 const ready = () => screen.findByRole('button', { name: 'Editar SN001' })
-const lastParams = () => new URL(fetchMock.mock.calls.at(-1)[0], 'http://local').searchParams
+const lastParams = () => new URL(fetchMock.mock.calls.filter(([url]) =>
+  url.startsWith('/api/equipamentos?')).at(-1)[0], 'http://local').searchParams
 const writes = () => fetchMock.mock.calls.filter(([, options]) => ['POST', 'PATCH'].includes(options?.method))
 async function newForm() {
   render(<App />)
@@ -87,7 +88,7 @@ describe('Listagem integrada', () => {
     expect((await screen.findByRole('alert')).textContent).toContain('conectar ao servidor')
     click('Tentar novamente')
     await ready()
-    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(fetchMock).toHaveBeenCalledTimes(3)
   })
 
   it('envia página, pesquisa e ordenação para o servidor e reinicia página', async () => {

@@ -2,7 +2,7 @@
 
 Sistema web para controle de equipamentos vinculados a contratos OneCare.
 
-O projeto está na Etapa 5: além do controle de equipamentos e dos status de cobertura, há um dashboard operacional com indicadores e listas de vencimentos. Notificações automáticas ainda não estão implementadas.
+O projeto está na Etapa 6A: além do controle de equipamentos, dos status de cobertura e do dashboard, há notificações internas para contratos vencendo ou vencidos. O envio por e-mail não faz parte desta etapa e permanece para a Etapa 6B.
 
 ## Tecnologias
 
@@ -130,6 +130,14 @@ Os indicadores são calculados dinamicamente pelo backend com as mesmas regras d
 
 “Atualizar dashboard” realiza uma nova consulta. Durante a atualização, os dados anteriores permanecem visíveis; erros são apresentados de forma genérica e podem ser tentados novamente.
 
+### Notificações internas
+
+O backend verifica contratos ao iniciar e diariamente às 08:00 no fuso `America/Fortaleza`. Equipamentos ativos que estejam na janela `VENCENDO` recebem um aviso `ONECARE_VENCENDO`; os já vencidos recebem `ONECARE_VENCIDO`. Contratos ativos fora da janela, sem término ou pertencentes a equipamentos arquivados não geram novos avisos.
+
+Cada evento é único por equipamento, tipo e data de término. Execuções repetidas ou concorrentes não duplicam avisos. Uma renovação altera a data que compõe a chave e poderá gerar novos avisos quando o contrato entrar novamente em `VENCENDO` ou `VENCIDO`. Notificações anteriores são preservadas mesmo após leitura, renovação ou arquivamento.
+
+O botão “Notificações” mostra a contagem não lida quando maior que zero. A tela permite filtrar todas, lidas e não lidas, paginar, atualizar manualmente e marcar uma ou todas como lidas. O detalhe completo só pode ser aberto para equipamento ainda ativo; registros arquivados continuam identificados no aviso sem criar um link inválido. Não há polling, WebSocket, e-mail ou integração externa nesta etapa.
+
 ### Roteiro manual
 
 1. Inicie backend e frontend nos dois terminais acima e abra `http://127.0.0.1:5173`.
@@ -145,8 +153,22 @@ Os indicadores são calculados dinamicamente pelo backend com as mesmas regras d
 11. Abra “Equipamentos vencidos”, teste pesquisa/paginação/ordenação e edite somente um registro de teste; ao renovar o término, ele deve sair da tela após a nova consulta.
 12. Abra “Dashboard”, compare os cards com as listagens filtradas, confira as duas listas e seus detalhes, teste os atalhos e use “Atualizar dashboard”.
 13. Confirme que equipamentos arquivados aparecem somente no card próprio e não integram os indicadores operacionais.
+14. Abra “Notificações”, confira a contagem, os filtros e a paginação, marque um aviso e depois todos como lidos. Confirme que avisos de equipamentos arquivados não oferecem acesso a um detalhe operacional.
 
 Não altere equipamentos reais para esses testes. Registros criados manualmente permanecem no banco; a interface não realiza exclusão física.
+
+## API de notificações
+
+Endpoints internos implementados:
+
+```http
+GET   /notificacoes?page=1&limit=20&lida=false
+GET   /notificacoes/nao-lidas/contagem
+PATCH /notificacoes/:id/ler
+PATCH /notificacoes/ler-todas
+```
+
+`page` e `limit` usam os padrões `1` e `20`, com limite máximo `100`. O filtro `lida` aceita somente `true` ou `false`. A listagem usa `createdAt` decrescente e retorna `data`, `pagination` e a contagem global `unreadCount`. Marcar uma notificação já lida é idempotente; um ID inexistente retorna `404 NOTIFICACAO_NAO_ENCONTRADA`.
 
 ## API de equipamentos
 

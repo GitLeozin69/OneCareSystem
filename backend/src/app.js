@@ -4,8 +4,10 @@ import { errorHandler } from './middlewares/errorHandler.js'
 import { dashboardRoutes } from './routes/dashboardRoutes.js'
 import { equipamentoRoutes } from './routes/equipamentoRoutes.js'
 import { importacaoRoutes } from './routes/importacaoRoutes.js'
+import { notificacaoRoutes } from './routes/notificacaoRoutes.js'
 
-export function buildApp({ dashboardService, equipamentoService, importacaoService, importacaoLimits, ...fastifyOptions } = {}) {
+export function buildApp({ dashboardService, equipamentoService, importacaoService, importacaoLimits,
+  notificacaoService, ...fastifyOptions } = {}) {
   const app = Fastify(fastifyOptions)
 
   app.setErrorHandler(errorHandler)
@@ -25,6 +27,10 @@ export function buildApp({ dashboardService, equipamentoService, importacaoServi
 
   if (importacaoService) app.register(importacaoRoutes, {
     prefix: '/equipamentos/importacao', importacaoService, limits: importacaoLimits,
+  })
+
+  if (notificacaoService) app.register(notificacaoRoutes, {
+    prefix: '/notificacoes', notificacaoService,
   })
 
   return app

@@ -20,6 +20,7 @@ const messages = {
   IMPORTACAO_INVALIDA: 'Nenhum equipamento foi importado. Corrija todas as linhas inválidas.',
   IMPORTACAO_CONFLITO: 'Conflito na confirmação. Nenhum equipamento foi importado; valide novamente.',
   IMPORTACAO_OCUPADA: 'Há importações em andamento. Tente novamente em instantes.',
+  NOTIFICACAO_NAO_ENCONTRADA: 'Notificação não encontrada.',
 }
 
 export class ApiError extends Error {
@@ -123,5 +124,22 @@ export const equipamentosApi = {
 export const dashboardApi = {
   summary(signal) {
     return request('/dashboard/resumo', { signal })
+  },
+}
+
+export const notificacoesApi = {
+  list(query, signal) {
+    const params = new URLSearchParams({ page: query.page, limit: query.limit })
+    if (query.lida !== undefined) params.set('lida', query.lida)
+    return request(`/notificacoes?${params}`, { signal })
+  },
+  unreadCount(signal) {
+    return request('/notificacoes/nao-lidas/contagem', { signal })
+  },
+  markRead(id) {
+    return request(`/notificacoes/${encodeURIComponent(id)}/ler`, { method: 'PATCH' })
+  },
+  markAllRead() {
+    return request('/notificacoes/ler-todas', { method: 'PATCH' })
   },
 }

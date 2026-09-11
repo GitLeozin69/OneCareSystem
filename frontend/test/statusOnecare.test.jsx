@@ -78,7 +78,8 @@ afterEach(() => vi.unstubAllGlobals())
 
 const click = (name) => fireEvent.click(screen.getByRole('button', { name }))
 const change = (label, value) => fireEvent.change(screen.getByLabelText(label), { target: { value } })
-const lastParams = () => new URL(fetchMock.mock.calls.at(-1)[0], 'http://local').searchParams
+const lastParams = () => new URL(fetchMock.mock.calls.filter(([url]) =>
+  url.startsWith('/api/equipamentos?')).at(-1)[0], 'http://local').searchParams
 const ready = () => screen.findByRole('button', { name: 'Editar ATIVO001' })
 
 describe('Indicador de status e prazo', () => {
