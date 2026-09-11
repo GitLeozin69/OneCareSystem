@@ -18,8 +18,12 @@ export function parseExcel(buffer, maxRows) {
     }
     const failure = () => importacaoError('ARQUIVO_INVALIDO', 'Não foi possível ler a planilha dentro dos limites de segurança.')
     const timer = setTimeout(() => finish(failure()), 15000)
-    worker.once('message', ({ error, result }) => finish(error
-      ? importacaoError(error.code, error.message, error.statusCode) : null, result))
+    worker.on('message', (message) => {
+      // O modo watch pode enviar mensagens internas antes do resultado do Excel.
+      if (message?.type !== 'onecare:excel:response') return
+      const { error, result } = message
+      finish(error ? importacaoError(error.code, error.message, error.statusCode) : null, result)
+    })
     worker.once('error', () => finish(failure()))
     worker.once('exit', () => { if (!finished) finish(failure()) })
   })

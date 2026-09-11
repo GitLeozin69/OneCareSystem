@@ -327,6 +327,8 @@ Proteções adicionais: rejeição de arquivos corrompidos/protegidos, macros, l
 
 ### Testes da importação e roteiro manual
 
+A validação deve ser enviada por `POST` pela interface “Importar Excel”; abrir a URL `/equipamentos/importacao/validar` na barra do navegador envia `GET` e retorna 404. Após atualizar o backend, reinicie `npm.cmd run dev:backend`. A suíte inclui regressão da leitura do Excel com `node --watch`, ignorando mensagens internas do monitoramento sem perder o resultado ou os erros do worker.
+
 `npm.cmd test` inclui testes da importação com planilhas geradas em memória. `npm.cmd run test:integration` verifica prévia sem escrita, confirmação e conflito real pelo índice MySQL. Uma transação externa faz rollback de todos os dados fictícios; podem existir lacunas normais nos IDs. Não utiliza nem altera equipamentos reais.
 
 Para conferência manual, crie uma planilha **fictícia** com os cabeçalhos acima e duas linhas: seriais `EXCELMANUAL001`/`EXCELMANUAL002`, clientes e distribuidores de teste, contratos `CONTRATO-FICTICIO-A`/`CONTRATO-FICTICIO-B`, produto `MODELO-TESTE`, início `01/01/2026` e término `01/01/2027`.
