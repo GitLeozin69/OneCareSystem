@@ -12,6 +12,9 @@ export function errorHandler(error, request, reply) {
   error = fromUniqueConstraintError(error) ?? error
 
   if (error instanceof AppError) {
+    if (error.statusCode === 429 && Number.isInteger(error.retryAfterSeconds)) {
+      reply.header('Retry-After', String(error.retryAfterSeconds))
+    }
     return reply.code(error.statusCode).send({
       error: error.code,
       message: error.message,
@@ -39,6 +42,14 @@ export function errorHandler(error, request, reply) {
     return reply.code(400).send({
       error: 'REQUISICAO_INVALIDA',
       message: 'A requisição não pôde ser processada.',
+      details: [],
+    })
+  }
+
+  if (error.statusCode === 413 || error.code === 'FST_ERR_CTP_BODY_TOO_LARGE') {
+    return reply.code(413).send({
+      error: 'LIMITE_REQUISICAO',
+      message: 'A requisição excede o limite de tamanho permitido.',
       details: [],
     })
   }

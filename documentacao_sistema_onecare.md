@@ -953,6 +953,10 @@ As sessões são tokens opacos aleatórios de 32 bytes, enviados somente no cook
 
 Toda operação `POST`, `PATCH`, `PUT` ou `DELETE` exige token CSRF no cabeçalho `x-csrf-token` e validação da origem contra `FRONTEND_ORIGIN`. O CORS permite credenciais somente para origens explícitas. Em produção, o backend exige `COOKIE_SECURE=true` e `CSRF_SECRET` externo com pelo menos 32 caracteres. Logs não devem conter senhas, cookies, tokens, cabeçalhos de autenticação nem URL do banco.
 
+A Etapa 7B vincula o token CSRF à sessão, restringe métodos e cabeçalhos CORS, adiciona cabeçalhos HTTP defensivos e impede cache público das respostas. Corpos JSON comuns têm limite de 64 KiB; o multipart Excel mantém o limite próprio de 10 MB. Login, importação, administração de usuários e demais requisições recebem limites proporcionais com resposta 429 e `Retry-After`. Esses contadores ficam em memória e deverão usar armazenamento compartilhado se houver mais de uma instância.
+
+O backend não confia em `X-Forwarded-For` por padrão. A configuração de proxy confiável pertence à Etapa 7C, depois da escolha da hospedagem. Em produção, `NODE_ENV=production`, origens HTTPS, cookie seguro, segredo CSRF externo e autenticação completa são obrigatórios. O relatório detalhado está em `docs/seguranca.md`.
+
 ## 27. Interface
 
 A interface deve ser limpa e objetiva.
@@ -1152,8 +1156,14 @@ Implementado:
 - administração de visualizadores, ativação, desativação e redefinição de senha;
 - limitação de tentativas de login e CORS com origem explícita.
 
-### Etapa 7B — Refinamento futuro
-Melhorar, somente após autorização:
+### Etapa 7B — Revisão e reforço de segurança
+Implementado:
+- revisão de autenticação, autorização, sessões, CSRF, CORS e importação;
+- headers HTTP, controle de cache, redaction de logs e limites de requisição;
+- validação mais estrita do ambiente de produção;
+- testes automatizados de segurança e relatório em `docs/seguranca.md`.
+
+Permanece futuro, somente após autorização:
 - permitir que o administrador altere a própria senha, mediante confirmação da senha atual e da nova senha;
 - revogar as demais sessões do administrador depois da alteração, preservando somente a sessão que efetuou a troca;
 - interface;

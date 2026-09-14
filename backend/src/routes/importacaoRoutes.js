@@ -5,8 +5,14 @@ export async function importacaoRoutes(app, { importacaoService, limits = import
   await app.register(multipart, { limits: { files: 1, fields: 0, parts: 1, fileSize: limits.maxBytes } })
   let running = 0
   for (const [path, method] of [['validar', 'validate'], ['confirmar', 'confirm']]) {
-    app.post(`/${path}`, { config: { access: 'ADMIN' }, bodyLimit: limits.maxBytes + 16384 }, async (request, reply) => {
-      if (running >= 2) throw importacaoError('IMPORTACAO_OCUPADA', 'Há importações em andamento. Tente novamente em instantes.', 429)
+    app.post(`/${path}`, {
+      config: {
+        access: 'ADMIN',
+        rateLimit: { max: 10, windowMs: 15 * 60 * 1000, name: 'excel-import' },
+      },
+      bodyLimit: limits.maxBytes + 16384,
+    }, async (request, reply) => {
+      if (running >= 2) throw importacaoError('IMPORTACAO_OCUPADA', 'Há importações em andamento. Tente novamente em instantes.', 429, [], 5)
       running++
       try {
         if (!request.isMultipart()) throw importacaoError('FORMATO_INVALIDO', 'Envie o arquivo no campo arquivo usando multipart/form-data.', 415)

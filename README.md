@@ -2,7 +2,7 @@
 
 Sistema web para controle de equipamentos vinculados a contratos OneCare.
 
-O projeto está na Etapa 7A: além do controle operacional e das notificações internas, há autenticação por contas individuais e controle de acesso entre `ADMIN` e `VISUALIZADOR`. O envio por e-mail não faz parte desta etapa e permanece reservado para a Etapa 6B.
+O projeto está na Etapa 7B: além do controle operacional e das notificações internas, há autenticação por contas individuais, controle de acesso entre `ADMIN` e `VISUALIZADOR` e uma camada de segurança revisada para a futura preparação de produção. O envio por e-mail não faz parte desta etapa e permanece reservado para a Etapa 6B.
 
 ## Tecnologias
 
@@ -94,9 +94,13 @@ npm.cmd --prefix backend run admin:create
 
 O comando solicita usuário, senha de 8 a 128 caracteres e confirmação, oculta a senha quando o terminal permite e recusa a criação de um segundo administrador. Não existe credencial padrão. O administrador cria contas `VISUALIZADOR` pela tela “Usuários”; essas contas consultam dashboard, equipamentos, arquivados e históricos, mas não alteram dados.
 
-No `.env`, configure `FRONTEND_ORIGIN` com uma lista explícita de origens, `SESSION_DURATION_HOURS` (padrão `8`) e `COOKIE_SECURE`. Em desenvolvimento HTTP local, use `COOKIE_SECURE=false`. Em produção, `COOKIE_SECURE=true` e um `CSRF_SECRET` aleatório de pelo menos 32 caracteres fornecido pelo ambiente são obrigatórios. O backend se recusa a iniciar com cookie inseguro em produção.
+No `.env`, configure `NODE_ENV`, `FRONTEND_ORIGIN` com uma lista explícita de origens, `SESSION_DURATION_HOURS` (padrão `8`) e `COOKIE_SECURE`. Em desenvolvimento HTTP local, use `NODE_ENV=development` e `COOKIE_SECURE=false`. Em produção, somente origens HTTPS são aceitas, `COOKIE_SECURE=true` e um `CSRF_SECRET` aleatório de pelo menos 32 caracteres fornecido pelo ambiente são obrigatórios. O backend falha explicitamente diante de modo inválido, cookie inseguro, origem HTTP, segredo ausente ou serviços de negócio sem autenticação.
 
 O frontend mantém o token CSRF somente em memória, envia cookies com `credentials: include` e não armazena sessão em `localStorage` ou `sessionStorage`.
+
+O token CSRF é vinculado ao cookie da sessão e toda operação mutável exige origem permitida. Sessões antigas apresentadas durante um novo login são revogadas; sessões expiradas são removidas durante autenticações bem-sucedidas. As senhas usam Argon2id com parâmetros explícitos. A API aplica headers de segurança, `Cache-Control: no-store`, limite de 64 KiB para corpos JSON comuns e limites de requisição em memória. O upload Excel preserva seu limite independente de 10 MB.
+
+Os limites em memória são adequados a uma instância local. Antes de escalar horizontalmente, a Etapa 7C deverá movê-los para um armazenamento compartilhado e configurar somente os proxies confiáveis. Consulte [docs/seguranca.md](docs/seguranca.md) para evidências, testes e pendências.
 
 Pendência futura: implementar “Alterar minha senha” para o administrador, exigindo a senha atual, a nova senha e sua confirmação. A alteração deverá manter o hash Argon2id e revogar as demais sessões administrativas. Até essa funcionalidade ser autorizada, a senha do administrador não pode ser alterada pela interface ou pelas rotas atuais.
 
@@ -119,6 +123,8 @@ Por padrão:
 - backend: `http://localhost:3000`
 - verificação de saúde: `http://localhost:3000/health`
 - frontend: `http://127.0.0.1:5173` (porta fixa; se estiver ocupada, o Vite informa o erro)
+
+O exemplo usa `HOST=127.0.0.1` para não expor o backend à rede local. Na hospedagem, ajuste `HOST` apenas conforme a exigência do provedor.
 
 O navegador chama `/api/equipamentos` na mesma origem do frontend. O proxy local do Vite remove `/api` e encaminha a chamada ao endereço definido em `VITE_API_URL` no `.env` da raiz (padrão: `http://127.0.0.1:3000`). O exemplo existente `http://localhost:3000` também pode ser usado. Reinicie o Vite após alterar essa configuração. O backend continua expondo `/equipamentos`, sem alteração de CORS.
 

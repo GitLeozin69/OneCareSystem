@@ -1,7 +1,7 @@
 import { AppError } from './appError.js'
 
-export function importacaoError(code, message, statusCode = 422, details = []) {
-  return new AppError({ code, message, statusCode, details })
+export function importacaoError(code, message, statusCode = 422, details = [], retryAfterSeconds) {
+  return new AppError({ code, message, statusCode, details, retryAfterSeconds })
 }
 
 export function importLimits(env = process.env) {

@@ -23,6 +23,8 @@ const messages = {
   NOTIFICACAO_NAO_ENCONTRADA: 'Notificação não encontrada.',
   CREDENCIAIS_INVALIDAS: 'Usuário ou senha inválidos.',
   LIMITE_LOGIN: 'Muitas tentativas. Aguarde 15 minutos e tente novamente.',
+  LIMITE_REQUISICOES: 'Muitas solicitações. Aguarde e tente novamente.',
+  LIMITE_REQUISICAO: 'A solicitação excede o limite de tamanho permitido.',
   NAO_AUTENTICADO: 'Sua sessão expirou. Entre novamente.',
   ACESSO_NEGADO: 'Você não tem permissão para realizar esta ação.',
   ORIGEM_NAO_PERMITIDA: 'A origem da solicitação não foi permitida.',

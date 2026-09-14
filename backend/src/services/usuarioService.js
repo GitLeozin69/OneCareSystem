@@ -1,5 +1,6 @@
 import argon2 from 'argon2'
 
+import { ARGON2_OPTIONS } from './authService.js'
 import { AppError } from '../utils/appError.js'
 import { publicUser, validatePassword, validateUsername } from '../utils/authValidation.js'
 
@@ -8,7 +9,7 @@ function notFound() {
 }
 
 async function passwordHash(password) {
-  return argon2.hash(validatePassword(password), { type: argon2.argon2id })
+  return argon2.hash(validatePassword(password), ARGON2_OPTIONS)
 }
 
 function mapUsernameConflict(error) {

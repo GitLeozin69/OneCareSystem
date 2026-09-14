@@ -8,6 +8,12 @@ import { normalizeUsername, publicUser } from '../utils/authValidation.js'
 export const SESSION_COOKIE = 'onecare_session'
 const WINDOW_MS = 15 * 60 * 1000
 const MAX_FAILURES = 5
+export const ARGON2_OPTIONS = Object.freeze({
+  type: argon2.argon2id,
+  memoryCost: 65536,
+  timeCost: 3,
+  parallelism: 4,
+})
 
 export function hashSessionToken(token) {
   return createHash('sha256').update(token).digest('hex')
@@ -19,7 +25,7 @@ function invalidCredentials() {
 
 export function createAuthService({ prisma, sessionDurationHours = 8, clock = () => new Date() }) {
   const attempts = new Map()
-  const dummyHash = argon2.hash(randomBytes(32), { type: argon2.argon2id })
+  const dummyHash = argon2.hash(randomBytes(32), ARGON2_OPTIONS)
 
   function rateKey(ip, username) {
     const usernameHash = createHash('sha256').update(username).digest('hex')
@@ -37,13 +43,16 @@ export function createAuthService({ prisma, sessionDurationHours = 8, clock = ()
     return entry
   }
 
-  async function login({ username: rawUsername, password, ip }) {
+  async function login({ username: rawUsername, password, ip, previousToken }) {
     const username = normalizeUsername(rawUsername)
     const now = clock()
     const key = rateKey(ip, username)
     const attempt = getAttempt(key, now)
     if (attempt.count >= MAX_FAILURES) {
-      throw new AppError({ statusCode: 429, code: 'LIMITE_LOGIN', message: 'Muitas tentativas. Aguarde 15 minutos e tente novamente.' })
+      const retryAfterSeconds = Math.max(1, Math.ceil(
+        (attempt.startedAt + WINDOW_MS - now.getTime()) / 1000,
+      ))
+      throw new AppError({ statusCode: 429, code: 'LIMITE_LOGIN', message: 'Muitas tentativas. Aguarde 15 minutos e tente novamente.', retryAfterSeconds })
     }
 
     const user = await prisma.usuario.findUnique({ where: { username } })
@@ -58,6 +67,12 @@ export function createAuthService({ prisma, sessionDurationHours = 8, clock = ()
     const token = randomBytes(32).toString('base64url')
     const expiresAt = new Date(now.getTime() + sessionDurationHours * 60 * 60 * 1000)
     await prisma.$transaction(async (tx) => {
+      await tx.sessao.deleteMany({ where: {
+        OR: [
+          { expiresAt: { lte: now } },
+          ...(previousToken ? [{ tokenHash: hashSessionToken(previousToken) }] : []),
+        ],
+      } })
       await tx.sessao.create({ data: { usuarioId: user.id, tokenHash: hashSessionToken(token), expiresAt } })
       await tx.usuario.update({ where: { id: user.id }, data: { ultimoLoginEm: now } })
     })

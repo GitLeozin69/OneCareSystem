@@ -7,7 +7,7 @@ import { startNotificacaoScheduler } from './services/notificacaoScheduler.js'
 import { createNotificacaoService } from './services/notificacaoService.js'
 import { createAuthService } from './services/authService.js'
 import { createUsuarioService } from './services/usuarioService.js'
-import { readSecurityConfig } from './plugins/security.js'
+import { readSecurityConfig, securityLoggerOptions } from './plugins/security.js'
 
 const prisma = createPrismaClient()
 const securityConfig = readSecurityConfig()
@@ -17,7 +17,8 @@ const notificacaoService = createNotificacaoService({ prisma })
 const authService = createAuthService({ prisma, sessionDurationHours: securityConfig.sessionDurationHours })
 const usuarioService = createUsuarioService({ prisma })
 const app = buildApp({
-  logger: true,
+  logger: securityLoggerOptions(),
+  trustProxy: false,
   dashboardService,
   equipamentoService,
   importacaoService: createImportacaoService({ prisma }),
@@ -26,7 +27,7 @@ const app = buildApp({
   usuarioService,
   securityConfig,
 })
-const host = process.env.HOST ?? '0.0.0.0'
+const host = process.env.HOST ?? '127.0.0.1'
 const port = Number.parseInt(process.env.PORT ?? '3000', 10)
 
 let stopNotificacaoScheduler

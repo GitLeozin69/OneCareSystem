@@ -10,13 +10,23 @@ import { usuarioRoutes } from './routes/usuarioRoutes.js'
 import { registerSecurity } from './plugins/security.js'
 
 export function buildApp({ dashboardService, equipamentoService, importacaoService, importacaoLimits,
-  notificacaoService, authService, usuarioService, securityConfig, ...fastifyOptions } = {}) {
-  const app = Fastify(fastifyOptions)
+  notificacaoService, authService, usuarioService, securityConfig,
+  runtimeEnv = process.env.NODE_ENV, ...fastifyOptions } = {}) {
+  const hasApplicationServices = dashboardService || equipamentoService || importacaoService ||
+    notificacaoService || usuarioService
+  if (!authService && runtimeEnv === 'production' && hasApplicationServices) {
+    throw new Error('Autenticação é obrigatória em produção.')
+  }
 
+  const app = Fastify({
+    bodyLimit: 64 * 1024,
+    ajv: { customOptions: { removeAdditional: false } },
+    ...fastifyOptions,
+  })
   app.setErrorHandler(errorHandler)
 
   function registerApplicationRoutes(instance, secured = false) {
-    instance.get('/health', { config: { access: 'PUBLIC' } }, async () => ({ status: 'ok' }))
+    instance.get('/health', { config: { access: 'PUBLIC', rateLimit: false } }, async () => ({ status: 'ok' }))
 
     if (secured) {
       instance.register(authRoutes, { prefix: '/auth', authService, securityConfig })

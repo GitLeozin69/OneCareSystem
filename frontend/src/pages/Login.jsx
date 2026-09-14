@@ -18,7 +18,7 @@ export default function Login() {
       {error && <p role="alert" className="mt-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error}</p>}
       <form className="mt-6 space-y-5" onSubmit={async (event) => {
         event.preventDefault(); setBusy(true); setError('')
-        try { await login({ username, password }) } catch (caught) { setError(caught.message) } finally { setBusy(false) }
+        try { await login({ username, password }) } catch (caught) { setError(caught.message) } finally { setPassword(''); setBusy(false) }
       }}>
         <div><label className="field-label" htmlFor="username">Usuário</label><input className="input" id="username" autoComplete="username" required value={username} onChange={(event) => setUsername(event.target.value)} /></div>
         <div><label className="field-label" htmlFor="password">Senha</label><input className="input" id="password" type="password" autoComplete="current-password" required value={password} onChange={(event) => setPassword(event.target.value)} /></div>

@@ -37,6 +37,7 @@ it('faz login com cookie, CSRF em memória e mensagem genérica para credenciais
   fireEvent.change(screen.getByLabelText('Senha'), { target: { value: 'senha incorreta' } })
   fireEvent.click(screen.getByRole('button', { name: 'Entrar' }))
   expect((await screen.findByRole('alert')).textContent).toContain('Usuário ou senha inválidos.')
+  expect(screen.getByLabelText('Senha').value).toBe('')
   const [, options] = fetchMock.mock.calls.find(([url]) => url === '/api/auth/login')
   expect(options.credentials).toBe('include')
   expect(options.headers['x-csrf-token']).toBe('csrf-login')
