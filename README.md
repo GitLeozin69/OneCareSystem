@@ -98,6 +98,8 @@ No `.env`, configure `FRONTEND_ORIGIN` com uma lista explícita de origens, `SES
 
 O frontend mantém o token CSRF somente em memória, envia cookies com `credentials: include` e não armazena sessão em `localStorage` ou `sessionStorage`.
 
+Pendência futura: implementar “Alterar minha senha” para o administrador, exigindo a senha atual, a nova senha e sua confirmação. A alteração deverá manter o hash Argon2id e revogar as demais sessões administrativas. Até essa funcionalidade ser autorizada, a senha do administrador não pode ser alterada pela interface ou pelas rotas atuais.
+
 ## Desenvolvimento
 
 Execute o backend:

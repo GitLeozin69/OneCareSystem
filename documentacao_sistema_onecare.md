@@ -1154,6 +1154,8 @@ Implementado:
 
 ### Etapa 7B — Refinamento futuro
 Melhorar, somente após autorização:
+- permitir que o administrador altere a própria senha, mediante confirmação da senha atual e da nova senha;
+- revogar as demais sessões do administrador depois da alteração, preservando somente a sessão que efetuou a troca;
 - interface;
 - responsividade;
 - tratamento de erros;
