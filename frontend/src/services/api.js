@@ -28,7 +28,7 @@ const messages = {
   ORIGEM_NAO_PERMITIDA: 'A origem da solicitação não foi permitida.',
   CSRF_INVALIDO: 'A proteção da sessão expirou. Atualize a página e tente novamente.',
   USERNAME_INVALIDO: 'Use de 3 a 50 caracteres: letras, números, ponto, hífen ou sublinhado.',
-  SENHA_INVALIDA: 'A senha deve ter de 12 a 128 caracteres.',
+  SENHA_INVALIDA: 'A senha deve ter de 8 a 128 caracteres.',
   USERNAME_DUPLICADO: 'Já existe um usuário com esse nome.',
   USUARIO_NAO_ENCONTRADO: 'Usuário não encontrado.',
   OPERACAO_NAO_PERMITIDA: 'Esta operação não é permitida.',

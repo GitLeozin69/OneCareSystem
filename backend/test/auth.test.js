@@ -15,8 +15,9 @@ test('valida formato do usuário e limites da senha sem normalizar a senha', () 
   for (const value of ['ab', 'nome com espaço', 'nome@dominio']) {
     assert.throws(() => validateUsername(value), (error) => error.code === 'USERNAME_INVALIDO')
   }
+  assert.equal(validatePassword('12345678'), '12345678')
   assert.equal(validatePassword('   senha com espaços   '), '   senha com espaços   ')
-  assert.throws(() => validatePassword('curta'), (error) => error.code === 'SENHA_INVALIDA')
+  assert.throws(() => validatePassword('1234567'), (error) => error.code === 'SENHA_INVALIDA')
 })
 
 test('login normaliza usuário, usa Argon2id e persiste somente hash do token', async () => {

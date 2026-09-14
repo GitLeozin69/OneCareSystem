@@ -19,11 +19,11 @@ export function validateUsername(value) {
 }
 
 export function validatePassword(value) {
-  if (typeof value !== 'string' || value.length < 12 || value.length > 128) {
+  if (typeof value !== 'string' || value.length < 8 || value.length > 128) {
     throw new AppError({
       statusCode: 400,
       code: 'SENHA_INVALIDA',
-      message: 'A senha deve ter de 12 a 128 caracteres.',
+      message: 'A senha deve ter de 8 a 128 caracteres.',
     })
   }
   return value

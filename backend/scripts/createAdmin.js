@@ -37,7 +37,7 @@ const reader = createInterface({ input: stdin, output: stdout })
 try {
   const username = await reader.question('Usuário do administrador: ')
   reader.close()
-  const password = await readSecret('Senha (12 a 128 caracteres): ')
+  const password = await readSecret('Senha (8 a 128 caracteres): ')
   const confirmation = await readSecret('Confirme a senha: ')
   if (password !== confirmation) throw new Error('As senhas não coincidem.')
   const user = await createUsuarioService({ prisma }).createAdmin({ username, password })

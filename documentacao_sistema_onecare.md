@@ -947,7 +947,7 @@ Mesmo sendo uma primeira versão simples, seguir boas práticas básicas:
 
 A Etapa 7A utiliza dois perfis: `ADMIN` e `VISUALIZADOR`. Existe exatamente um administrador, criado somente pelo comando interativo `npm.cmd --prefix backend run admin:create`; não existem credenciais padrão nem cadastro público. O administrador cria e gerencia visualizadores. Visualizadores podem consultar dashboard, equipamentos ativos, vencidos, arquivados e histórico, mas não podem cadastrar, editar, arquivar, restaurar, importar, acessar notificações internas ou administrar usuários.
 
-As senhas têm de 12 a 128 caracteres e são armazenadas exclusivamente como hash Argon2id. O nome de usuário é normalizado para minúsculas, tem de 3 a 50 caracteres e aceita letras, números, ponto, hífen e sublinhado. O login usa resposta genérica para usuário inexistente, senha incorreta ou conta inativa e limita cinco falhas por combinação segura de IP e usuário normalizado em uma janela de 15 minutos.
+As senhas têm de 8 a 128 caracteres e são armazenadas exclusivamente como hash Argon2id. O nome de usuário é normalizado para minúsculas, tem de 3 a 50 caracteres e aceita letras, números, ponto, hífen e sublinhado. O login usa resposta genérica para usuário inexistente, senha incorreta ou conta inativa e limita cinco falhas por combinação segura de IP e usuário normalizado em uma janela de 15 minutos.
 
 As sessões são tokens opacos aleatórios de 32 bytes, enviados somente no cookie `onecare_session` com `HttpOnly`, `SameSite=Strict`, `Path=/`, expiração e `Secure` obrigatório em produção. Apenas SHA-256 do token é persistido em `sessoes`; não são usados JWT, `localStorage` ou `sessionStorage`. Desativação e redefinição de senha de visualizador revogam suas sessões imediatamente.
 

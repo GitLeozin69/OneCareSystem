@@ -42,7 +42,7 @@ export default function Usuarios() {
       setUsername(''); setPassword('')
     }}>
       <div><label className="field-label" htmlFor="new-username">Novo usuário</label><input className="input" id="new-username" required value={username} onChange={(event) => setUsername(event.target.value)} /></div>
-      <div><label className="field-label" htmlFor="new-password">Senha inicial</label><input className="input" id="new-password" type="password" minLength={12} maxLength={128} autoComplete="new-password" required value={password} onChange={(event) => setPassword(event.target.value)} /></div>
+      <div><label className="field-label" htmlFor="new-password">Senha inicial</label><input className="input" id="new-password" type="password" minLength={8} maxLength={128} autoComplete="new-password" required value={password} onChange={(event) => setPassword(event.target.value)} /></div>
       <Button type="submit" variant="primary">Criar visualizador</Button>
     </form>
     <div className="panel mt-6 overflow-x-auto">
@@ -59,6 +59,6 @@ export default function Usuarios() {
       if (!window.confirm(`Redefinir a senha de ${resetUser.username} e encerrar todas as sessões dessa conta?`)) return
       await action(() => usuariosApi.resetPassword(resetUser.id, resetPassword), 'Senha redefinida e sessões encerradas.')
       setResetUser(null); setResetPassword('')
-    }}><h2 id="reset-title" className="text-xl font-semibold">Redefinir senha de {resetUser.username}</h2><p className="mt-2 text-sm text-slate-600">Todas as sessões dessa conta serão encerradas.</p><div className="mt-5"><label className="field-label" htmlFor="reset-password">Nova senha</label><input className="input" id="reset-password" type="password" minLength={12} maxLength={128} autoComplete="new-password" required value={resetPassword} onChange={(event) => setResetPassword(event.target.value)} /></div><div className="mt-6 flex gap-3"><Button type="submit" variant="primary">Confirmar redefinição</Button><Button onClick={() => setResetUser(null)}>Cancelar</Button></div></form></div>}
+    }}><h2 id="reset-title" className="text-xl font-semibold">Redefinir senha de {resetUser.username}</h2><p className="mt-2 text-sm text-slate-600">Todas as sessões dessa conta serão encerradas.</p><div className="mt-5"><label className="field-label" htmlFor="reset-password">Nova senha</label><input className="input" id="reset-password" type="password" minLength={8} maxLength={128} autoComplete="new-password" required value={resetPassword} onChange={(event) => setResetPassword(event.target.value)} /></div><div className="mt-6 flex gap-3"><Button type="submit" variant="primary">Confirmar redefinição</Button><Button onClick={() => setResetUser(null)}>Cancelar</Button></div></form></div>}
   </section>
 }

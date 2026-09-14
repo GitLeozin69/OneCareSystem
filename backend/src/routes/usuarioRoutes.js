@@ -9,7 +9,7 @@ export async function usuarioRoutes(app, { usuarioService }) {
     config: { access: 'ADMIN' },
     schema: {
       body: { type: 'object', additionalProperties: false, required: ['username', 'password'],
-        properties: { username: { type: 'string', minLength: 3, maxLength: 50 }, password: { type: 'string', minLength: 12, maxLength: 128 } } },
+        properties: { username: { type: 'string', minLength: 3, maxLength: 50 }, password: { type: 'string', minLength: 8, maxLength: 128 } } },
     },
   }, async (request, reply) => reply.code(201).send(await usuarioService.createViewer(request.body)))
   app.patch('/:id/status', {
@@ -18,6 +18,6 @@ export async function usuarioRoutes(app, { usuarioService }) {
   }, (request) => usuarioService.setStatus(Number(request.params.id), request.body.ativo))
   app.patch('/:id/senha', {
     config: { access: 'ADMIN' },
-    schema: { params: idParams, body: { type: 'object', additionalProperties: false, required: ['password'], properties: { password: { type: 'string', minLength: 12, maxLength: 128 } } } },
+    schema: { params: idParams, body: { type: 'object', additionalProperties: false, required: ['password'], properties: { password: { type: 'string', minLength: 8, maxLength: 128 } } } },
   }, (request) => usuarioService.resetPassword(Number(request.params.id), request.body.password))
 }

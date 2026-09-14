@@ -92,7 +92,7 @@ Depois de aplicar as migrations, crie o único administrador em um terminal inte
 npm.cmd --prefix backend run admin:create
 ```
 
-O comando solicita usuário, senha e confirmação, oculta a senha quando o terminal permite e recusa a criação de um segundo administrador. Não existe credencial padrão. O administrador cria contas `VISUALIZADOR` pela tela “Usuários”; essas contas consultam dashboard, equipamentos, arquivados e históricos, mas não alteram dados.
+O comando solicita usuário, senha de 8 a 128 caracteres e confirmação, oculta a senha quando o terminal permite e recusa a criação de um segundo administrador. Não existe credencial padrão. O administrador cria contas `VISUALIZADOR` pela tela “Usuários”; essas contas consultam dashboard, equipamentos, arquivados e históricos, mas não alteram dados.
 
 No `.env`, configure `FRONTEND_ORIGIN` com uma lista explícita de origens, `SESSION_DURATION_HOURS` (padrão `8`) e `COOKIE_SECURE`. Em desenvolvimento HTTP local, use `COOKIE_SECURE=false`. Em produção, `COOKIE_SECURE=true` e um `CSRF_SECRET` aleatório de pelo menos 32 caracteres fornecido pelo ambiente são obrigatórios. O backend se recusa a iniciar com cookie inseguro em produção.
 
