@@ -38,10 +38,10 @@ function AppContent() {
   return (
     <>
       <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:bg-white focus:p-4">Pular para o conteúdo</a>
-      <header className="border-b border-[#29443e] bg-[#33534c] text-white">
+      <header className="border-b border-[#203a34] bg-[#294740] text-white">
         <div className="mx-auto flex max-w-[1440px] flex-wrap items-center gap-3 px-5 py-5 sm:px-10">
           <img src="/logo-onecare.png" alt="Inteligência em Negócios" className="size-16 shrink-0 object-contain" />
-          <div className="mr-auto"><span className="text-lg font-semibold tracking-tight">OneCare</span><p className="text-xs text-emerald-50/80">Gestão de equipamentos</p></div>
+          <div className="mr-auto"><span className="text-lg font-semibold tracking-tight">RW Inteligência em Negócios</span><p className="text-xs text-emerald-50/80">Gestão de equipamentos</p></div>
           <nav aria-label="Navegação principal" className="flex gap-2">
             <button type="button" className="btn header-btn" aria-current={destination.page === 'dashboard' ? 'page' : undefined} onClick={() => setDestination({ page: 'dashboard' })}>Dashboard</button>
             <button type="button" className="btn header-btn" aria-current={destination.page === 'equipamentos' ? 'page' : undefined} onClick={() => showEquipamentos()}>Equipamentos</button>

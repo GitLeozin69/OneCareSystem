@@ -10,9 +10,10 @@ export default function Login() {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
 
-  return <main className="grid min-h-screen place-items-center bg-slate-100 px-5">
+  return <main className="grid min-h-screen place-items-center bg-[#162b26] px-5">
     <section className="panel w-full max-w-md p-8" aria-labelledby="login-title">
-      <p className="eyebrow mb-2">ONECARE</p><h1 id="login-title" className="text-3xl font-semibold">Entrar</h1>
+      <img src="/logo-onecare.png" alt="RW Inteligência em Negócios" className="mx-auto mb-5 size-24 object-contain" />
+      <h1 id="login-title" className="text-3xl font-semibold">Entrar</h1>
       <p className="mt-2 text-sm text-slate-600">Use sua conta individual para acessar o sistema.</p>
       {notice && <p role="status" className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">{notice}</p>}
       {error && <p role="alert" className="mt-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error}</p>}

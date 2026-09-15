@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 @layer base {
-  body { @apply m-0 min-w-80 bg-slate-50 text-slate-900 antialiased; font-family: system-ui, sans-serif; }
+  body { @apply m-0 min-w-80 bg-[#faf8f2] text-slate-900 antialiased; font-family: system-ui, sans-serif; }
   button, input, select { font: inherit; }
   button:not(:disabled) { cursor: pointer; }
   :focus-visible { @apply outline-2 outline-offset-4 outline-teal-700; }
@@ -17,5 +17,5 @@
   .btn-primary { @apply border-teal-800 bg-teal-800 text-white enabled:hover:bg-teal-900; }
   .btn-secondary { @apply border-slate-300 bg-white text-slate-700 enabled:hover:bg-slate-100; }
   .header-btn { @apply border-white/40 bg-white/10 text-white enabled:hover:bg-white/20; }
-  .header-btn[aria-current="page"] { @apply border-white bg-white text-[#33534c]; }
+  .header-btn[aria-current="page"] { @apply border-white bg-white text-[#294740]; }
 }

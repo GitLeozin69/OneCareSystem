@@ -13,7 +13,7 @@ export default function EquipamentosTable({
   onView,
 }) {
   const headings = [
-    'Serial', 'Part number', 'Cliente', 'Distribuidor', 'Patrimônio',
+    'Serial', 'Modelo', 'Cliente', 'Distribuidor', 'Patrimônio',
     'Nota fiscal', 'Contrato OneCare',
     'Término do OneCare',
     ...(!archived ? ['Status e prazo'] : []),

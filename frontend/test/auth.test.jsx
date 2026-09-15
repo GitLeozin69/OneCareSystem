@@ -81,7 +81,7 @@ it('exibe a nova logo e o cabeçalho verde para usuário autenticado', async () 
   await screen.findByText('Nenhum equipamento nesta página')
   const logo = screen.getByRole('img', { name: 'Inteligência em Negócios' })
   expect(logo.getAttribute('src')).toBe('/logo-onecare.png')
-  expect(logo.closest('header').className).toContain('bg-[#33534c]')
+  expect(logo.closest('header').className).toContain('bg-[#294740]')
 })
 
 it('401 em consulta encerra o estado autenticado e informa sessão expirada', async () => {
