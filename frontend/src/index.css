@@ -16,4 +16,6 @@
   .btn { @apply inline-flex min-h-11 items-center justify-center rounded-lg border px-4 py-2 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50; }
   .btn-primary { @apply border-teal-800 bg-teal-800 text-white enabled:hover:bg-teal-900; }
   .btn-secondary { @apply border-slate-300 bg-white text-slate-700 enabled:hover:bg-slate-100; }
+  .header-btn { @apply border-white/40 bg-white/10 text-white enabled:hover:bg-white/20; }
+  .header-btn[aria-current="page"] { @apply border-white bg-white text-[#33534c]; }
 }

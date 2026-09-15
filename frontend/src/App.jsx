@@ -38,18 +38,18 @@ function AppContent() {
   return (
     <>
       <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:bg-white focus:p-4">Pular para o conteúdo</a>
-      <header className="border-b border-slate-200 bg-white">
+      <header className="border-b border-[#29443e] bg-[#33534c] text-white">
         <div className="mx-auto flex max-w-[1440px] flex-wrap items-center gap-3 px-5 py-5 sm:px-10">
-          <span aria-hidden="true" className="grid size-10 place-items-center rounded-xl bg-teal-800 text-sm font-bold tracking-tight text-white">OC</span>
-          <div className="mr-auto"><span className="text-lg font-semibold tracking-tight">OneCare</span><p className="text-xs text-slate-500">Gestão de equipamentos</p></div>
+          <img src="/logo-onecare.png" alt="Inteligência em Negócios" className="size-16 shrink-0 object-contain" />
+          <div className="mr-auto"><span className="text-lg font-semibold tracking-tight">OneCare</span><p className="text-xs text-emerald-50/80">Gestão de equipamentos</p></div>
           <nav aria-label="Navegação principal" className="flex gap-2">
-            <button type="button" className="btn btn-secondary" aria-current={destination.page === 'dashboard' ? 'page' : undefined} onClick={() => setDestination({ page: 'dashboard' })}>Dashboard</button>
-            <button type="button" className="btn btn-secondary" aria-current={destination.page === 'equipamentos' ? 'page' : undefined} onClick={() => showEquipamentos()}>Equipamentos</button>
-            {admin && <button type="button" className="btn btn-secondary gap-2" aria-current={destination.page === 'notificacoes' ? 'page' : undefined} aria-label={`Notificações, ${unreadCount} não lida${unreadCount === 1 ? '' : 's'}`} onClick={() => setDestination({ page: 'notificacoes' })}><span aria-hidden="true">🔔</span> Notificações {unreadCount > 0 && <span className="rounded-full bg-red-700 px-2 py-0.5 text-xs text-white">{unreadCount}</span>}</button>}
-            {admin && <button type="button" className="btn btn-secondary" aria-current={destination.page === 'usuarios' ? 'page' : undefined} onClick={() => setDestination({ page: 'usuarios' })}>Usuários</button>}
-            {admin && <button type="button" className="btn btn-secondary" aria-current={destination.page === 'senha' ? 'page' : undefined} onClick={() => setDestination({ page: 'senha' })}>Alterar minha senha</button>}
-            <span className="self-center px-2 text-xs text-slate-600">{user.username} · {admin ? 'Administrador' : 'Visualizador'}</span>
-            <button type="button" className="btn btn-secondary" onClick={logout}>Sair</button>
+            <button type="button" className="btn header-btn" aria-current={destination.page === 'dashboard' ? 'page' : undefined} onClick={() => setDestination({ page: 'dashboard' })}>Dashboard</button>
+            <button type="button" className="btn header-btn" aria-current={destination.page === 'equipamentos' ? 'page' : undefined} onClick={() => showEquipamentos()}>Equipamentos</button>
+            {admin && <button type="button" className="btn header-btn gap-2" aria-current={destination.page === 'notificacoes' ? 'page' : undefined} aria-label={`Notificações, ${unreadCount} não lida${unreadCount === 1 ? '' : 's'}`} onClick={() => setDestination({ page: 'notificacoes' })}><span aria-hidden="true">🔔</span> Notificações {unreadCount > 0 && <span className="rounded-full bg-red-700 px-2 py-0.5 text-xs text-white">{unreadCount}</span>}</button>}
+            {admin && <button type="button" className="btn header-btn" aria-current={destination.page === 'usuarios' ? 'page' : undefined} onClick={() => setDestination({ page: 'usuarios' })}>Usuários</button>}
+            {admin && <button type="button" className="btn header-btn" aria-current={destination.page === 'senha' ? 'page' : undefined} onClick={() => setDestination({ page: 'senha' })}>Alterar minha senha</button>}
+            <span className="self-center px-2 text-xs text-emerald-50/80">{user.username} · {admin ? 'Administrador' : 'Visualizador'}</span>
+            <button type="button" className="btn header-btn" onClick={logout}>Sair</button>
           </nav>
         </div>
       </header>

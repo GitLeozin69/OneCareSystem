@@ -72,6 +72,18 @@ it('administrador acessa gestão de usuários e a redefinição usa campo de sen
   expect(screen.queryByText(/senha anterior/i)).toBeNull()
 })
 
+it('exibe a nova logo e o cabeçalho verde para usuário autenticado', async () => {
+  vi.stubGlobal('fetch', vi.fn(async (url) => {
+    if (url === '/api/notificacoes/nao-lidas/contagem') return response({ unreadCount: 0 })
+    return response(emptyList)
+  }))
+  render(<App initialUser={admin} />)
+  await screen.findByText('Nenhum equipamento nesta página')
+  const logo = screen.getByRole('img', { name: 'Inteligência em Negócios' })
+  expect(logo.getAttribute('src')).toBe('/logo-onecare.png')
+  expect(logo.closest('header').className).toContain('bg-[#33534c]')
+})
+
 it('401 em consulta encerra o estado autenticado e informa sessão expirada', async () => {
   vi.stubGlobal('fetch', vi.fn(async () => response({ error: 'NAO_AUTENTICADO' }, 401)))
   render(<App initialUser={viewer} />)
