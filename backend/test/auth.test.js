@@ -30,7 +30,7 @@ test('login normaliza usuário, usa Argon2id e persiste somente hash do token', 
     usuario: { findUnique: async ({ where }) => where.username === user.username ? user : null },
     $transaction: async (operation) => operation({
       sessao: { deleteMany: async () => {}, create: async ({ data }) => { sessionData = data } },
-      usuario: { update: async () => user },
+      usuario: { updateMany: async () => ({ count: 1 }) },
     }),
   }
   const result = await createAuthService({ prisma, clock: () => now }).login({
@@ -79,7 +79,7 @@ test('login bem-sucedido remove sessões expiradas e revoga o token anterior', a
         deleteMany: async ({ where }) => { cleanupWhere = where },
         create: async () => {},
       },
-      usuario: { update: async () => user },
+      usuario: { updateMany: async () => ({ count: 1 }) },
     }),
   }
   await createAuthService({ prisma, clock: () => now }).login({

@@ -4,6 +4,7 @@ import argon2 from 'argon2'
 
 import { AppError } from '../utils/appError.js'
 import { normalizeUsername, publicUser } from '../utils/authValidation.js'
+import { passwordChangeError, validatePasswordChange } from '../utils/passwordChangeValidation.js'
 
 export const SESSION_COOKIE = 'onecare_session'
 const WINDOW_MS = 15 * 60 * 1000
@@ -67,6 +68,13 @@ export function createAuthService({ prisma, sessionDurationHours = 8, clock = ()
     const token = randomBytes(32).toString('base64url')
     const expiresAt = new Date(now.getTime() + sessionDurationHours * 60 * 60 * 1000)
     await prisma.$transaction(async (tx) => {
+      // Serializa a emissão de sessão com a troca de senha, verificando o hash
+      // que foi autenticado antes de criar qualquer sessão nova.
+      const updated = await tx.usuario.updateMany({
+        where: { id: user.id, senhaHash: user.senhaHash, ativo: true },
+        data: { ultimoLoginEm: now },
+      })
+      if (updated.count !== 1) throw invalidCredentials()
       await tx.sessao.deleteMany({ where: {
         OR: [
           { expiresAt: { lte: now } },
@@ -74,7 +82,6 @@ export function createAuthService({ prisma, sessionDurationHours = 8, clock = ()
         ],
       } })
       await tx.sessao.create({ data: { usuarioId: user.id, tokenHash: hashSessionToken(token), expiresAt } })
-      await tx.usuario.update({ where: { id: user.id }, data: { ultimoLoginEm: now } })
     })
     return { token, expiresAt, user: publicUser({ ...user, ultimoLoginEm: now }) }
   }
@@ -97,5 +104,33 @@ export function createAuthService({ prisma, sessionDurationHours = 8, clock = ()
     if (token) await prisma.sessao.deleteMany({ where: { tokenHash: hashSessionToken(token) } })
   }
 
-  return { login, logout, resolveSession }
+  async function changeOwnPassword(userId, sessionToken, payload) {
+    const { senhaAtual, novaSenha } = validatePasswordChange(payload)
+    const user = await prisma.usuario.findUnique({ where: { id: userId } })
+    if (!user?.ativo || !sessionToken) {
+      throw new AppError({ statusCode: 401, code: 'NAO_AUTENTICADO', message: 'Autenticação necessária.' })
+    }
+    if (user.role !== 'ADMIN') {
+      throw new AppError({ statusCode: 403, code: 'ACESSO_NEGADO', message: 'Acesso não permitido.' })
+    }
+    if (!await argon2.verify(user.senhaHash, senhaAtual)) {
+      throw passwordChangeError('SENHA_ATUAL_INCORRETA', 'A senha atual está incorreta.')
+    }
+    const senhaHash = await argon2.hash(novaSenha, ARGON2_OPTIONS)
+    await prisma.$transaction(async (tx) => {
+      const updated = await tx.usuario.updateMany({
+        where: {
+          id: userId, role: 'ADMIN', ativo: true, senhaHash: user.senhaHash,
+          sessoes: { some: { tokenHash: hashSessionToken(sessionToken), expiresAt: { gt: clock() } } },
+        },
+        data: { senhaHash },
+      })
+      if (updated.count !== 1) {
+        throw passwordChangeError('ALTERACAO_SENHA_NAO_CONCLUIDA', 'A alteração não foi concluída. Entre novamente e tente outra vez.')
+      }
+      await tx.sessao.deleteMany({ where: { usuarioId: userId } })
+    })
+  }
+
+  return { login, logout, resolveSession, changeOwnPassword }
 }

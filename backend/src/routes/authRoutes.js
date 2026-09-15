@@ -1,5 +1,6 @@
 import { SESSION_COOKIE } from '../services/authService.js'
 import { csrfUserInfo, sessionCookieOptions } from '../plugins/security.js'
+import { passwordChangeError, validatePasswordChange } from '../utils/passwordChangeValidation.js'
 
 const credentialsSchema = {
   type: 'object', additionalProperties: false, required: ['username', 'password'],
@@ -10,6 +11,25 @@ const credentialsSchema = {
 }
 
 export async function authRoutes(app, { authService, securityConfig }) {
+  app.patch('/senha', {
+    config: { access: 'ADMIN', rateLimit: {
+      max: 5, windowMs: 15 * 60 * 1000, name: 'own-password-change',
+    } },
+    // Validação explícita evita a coerção automática de números/arrays para strings.
+    preValidation: async (request) => {
+      if (Object.keys(request.query).length) {
+        throw passwordChangeError('REQUISICAO_INVALIDA', 'Envie as senhas somente no corpo JSON da requisição.')
+      }
+      validatePasswordChange(request.body)
+    },
+  }, async (request, reply) => {
+    await authService.changeOwnPassword(request.authUser.id, request.cookies[SESSION_COOKIE], request.body)
+    reply.clearCookie(SESSION_COOKIE, sessionCookieOptions(securityConfig))
+    reply.clearCookie('onecare_csrf', sessionCookieOptions(securityConfig))
+    request.log.info({ userId: request.authUser.id }, 'Senha própria alterada; sessões revogadas')
+    return reply.code(204).send()
+  })
+
   app.get('/csrf', { config: { access: 'PUBLIC' } }, async (request, reply) => ({
     csrfToken: await reply.generateCsrf({
       userInfo: csrfUserInfo(request.cookies[SESSION_COOKIE]),

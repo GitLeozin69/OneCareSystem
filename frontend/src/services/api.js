@@ -31,6 +31,10 @@ const messages = {
   CSRF_INVALIDO: 'A proteção da sessão expirou. Atualize a página e tente novamente.',
   USERNAME_INVALIDO: 'Use de 3 a 50 caracteres: letras, números, ponto, hífen ou sublinhado.',
   SENHA_INVALIDA: 'A senha deve ter de 8 a 128 caracteres.',
+  SENHA_ATUAL_INCORRETA: 'A senha atual está incorreta.',
+  CONFIRMACAO_SENHA_INVALIDA: 'A confirmação deve ser igual à nova senha.',
+  SENHA_REUTILIZADA: 'A nova senha deve ser diferente da senha atual.',
+  ALTERACAO_SENHA_NAO_CONCLUIDA: 'A alteração não foi concluída. Entre novamente e tente outra vez.',
   USERNAME_DUPLICADO: 'Já existe um usuário com esse nome.',
   USUARIO_NAO_ENCONTRADO: 'Usuário não encontrado.',
   OPERACAO_NAO_PERMITIDA: 'Esta operação não é permitida.',
@@ -83,6 +87,7 @@ async function request(path, { signal, method = 'GET', body, suppressAuthEvents 
     throw new ApiError('Não foi possível conectar ao servidor. Verifique a conexão e tente novamente.')
   }
 
+  if (response.ok && response.status === 204) return null
   const data = await response.json().catch(() => null)
   if (!response.ok || !data) {
     const code = response.status < 500 ? data?.error : undefined
@@ -109,6 +114,7 @@ export const authApi = {
   login(payload) { return request('/auth/login', { method: 'POST', body: payload, suppressAuthEvents: true }) },
   me(signal) { return request('/auth/me', { signal, suppressAuthEvents: true }) },
   logout() { return request('/auth/logout', { method: 'POST', suppressAuthEvents: true }) },
+  changeOwnPassword(payload) { return request('/auth/senha', { method: 'PATCH', body: payload }) },
 }
 
 export const usuariosApi = {

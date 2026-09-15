@@ -43,6 +43,17 @@ export function AuthProvider({ children, initialUser }) {
     }
   }, [setCsrf])
 
-  const value = useMemo(() => ({ user, loading, notice, setNotice, login, logout }), [user, loading, notice, login, logout])
+  const changeOwnPassword = useCallback(async (payload) => {
+    await authApi.changeOwnPassword(payload)
+    setCsrf(''); setUser(null); setLoading(true)
+    setNotice('Senha alterada com sucesso. Todas as sessões foram encerradas. Entre com a nova senha.')
+    try {
+      const result = await authApi.csrf().catch(() => null)
+      if (result) setCsrf(result.csrfToken)
+    } finally { setLoading(false) }
+  }, [setCsrf])
+
+  const value = useMemo(() => ({ user, loading, notice, setNotice, login, logout, changeOwnPassword }),
+    [user, loading, notice, login, logout, changeOwnPassword])
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

@@ -957,6 +957,12 @@ A Etapa 7B vincula o token CSRF à sessão, restringe métodos e cabeçalhos COR
 
 O backend não confia em `X-Forwarded-For` por padrão. A configuração de proxy confiável pertence à Etapa 7C, depois da escolha da hospedagem. Em produção, `NODE_ENV=production`, origens HTTPS, cookie seguro, segredo CSRF externo e autenticação completa são obrigatórios. O relatório detalhado está em `docs/seguranca.md`.
 
+Na Etapa 7B.1, o administrador ativo pode alterar a própria senha em “Alterar minha senha”, através de `PATCH /auth/senha`. O corpo JSON contém somente `senhaAtual`, `novaSenha` e `confirmacaoNovaSenha`; query string não é aceita. A nova senha deve ter de 8 a 128 caracteres, diferir da atual e coincidir exatamente com a confirmação. Os três valores são strings não vazias e não compostas somente por espaços, sem normalização silenciosa. A senha atual é verificada contra o hash armazenado.
+
+A rota exige sessão de `ADMIN`, origem permitida e CSRF e limita cinco requisições por administrador em 15 minutos por instância. Sucesso retorna `204`: grava exclusivamente hash Argon2id com os parâmetros existentes e revoga todas as sessões do administrador, incluindo a atual, na mesma transação. Expira cookies de sessão e CSRF e exige novo login; a interface limpa os campos e informa o resultado. Essa regra substitui a previsão anterior de manter a sessão da troca. Falhas de validação, senha atual incorreta (`400 SENHA_ATUAL_INCORRETA`) ou falha transacional preservam senha e sessões. Sessão inválida recebe `401`; visualizador recebe `403`.
+
+A atualização condicionada ao hash anterior e à sessão válida evita trocas concorrentes com credencial obsoleta. O login também confere o hash autenticado na transação antes de emitir sessão, coordenando a emissão com a revogação. A estrutura existente de `usuarios` e `sessoes` é suficiente, sem migration. Recuperação de senha esquecida requer manutenção técnica autorizada conforme o procedimento do README; não há fluxo de recuperação por e-mail ou senha fixa.
+
 ## 27. Interface
 
 A interface deve ser limpa e objetiva.
@@ -1163,9 +1169,15 @@ Implementado:
 - validação mais estrita do ambiente de produção;
 - testes automatizados de segurança e relatório em `docs/seguranca.md`.
 
+### Etapa 7B.1 — Alteração da própria senha pelo administrador
+Implementado:
+- formulário exclusivo para administrador ativo, exigindo senha atual, nova senha e confirmação;
+- `PATCH /auth/senha` com validação, CSRF, origem e limitação de requisições;
+- Argon2id preservado e revogação transacional de todas as sessões, inclusive a atual;
+- limpeza dos campos e novo login obrigatório após sucesso;
+- testes isolados, integração MySQL com rollback e procedimento operacional no README.
+
 Permanece futuro, somente após autorização:
-- permitir que o administrador altere a própria senha, mediante confirmação da senha atual e da nova senha;
-- revogar as demais sessões do administrador depois da alteração, preservando somente a sessão que efetuou a troca;
 - interface;
 - responsividade;
 - tratamento de erros;

@@ -43,6 +43,7 @@ Revisão executada antes da preparação de hospedagem. Ela cobre o código atua
 | Importação Excel | Negado | Negado | Permitido com CSRF |
 | Notificações internas | Negado | Negado | Permitido com CSRF nas mutações |
 | Administração de usuários | Negado | Negado | Permitido com CSRF nas mutações |
+| Alteração da própria senha | Negado | Negado | Permitido com senha atual, CSRF e origem válida |
 
 ## Dependências e auditorias
 
@@ -64,7 +65,18 @@ Revisão executada antes da preparação de hospedagem. Ela cobre o código atua
 - Definir os proxies confiáveis antes de habilitar `trustProxy`.
 - Compartilhar os contadores de rate limit caso haja múltiplas instâncias.
 - Fornecer `CSRF_SECRET`, `DATABASE_URL` e demais segredos pelo ambiente da hospedagem.
-- Implementar futuramente a troca da própria senha do administrador, mediante senha atual, mantendo somente a sessão que realizou a alteração. Essa função não faz parte da Etapa 7B.
+
+## Complemento — Etapa 7B.1
+
+- `PATCH /auth/senha` atende somente ao administrador ativo autenticado. Os campos são `senhaAtual`, `novaSenha` e `confirmacaoNovaSenha`, exclusivamente no corpo JSON. A validação antes da coerção do framework rejeita tipos incorretos, propriedades inesperadas, campos ausentes, vazios ou somente espaços. A nova senha mantém a política de 8 a 128 caracteres, exige confirmação exata e não pode repetir a atual.
+- Argon2id mantém 64 MiB, três iterações e paralelismo quatro. Senha e revogação de todas as sessões são gravadas na mesma transação. A sessão atual também é revogada, substituindo a previsão anterior de preservá-la. A rota expira ambos os cookies; CSRF antigo não autoriza novas operações e o login exige uma nova sessão.
+- Um `updateMany` condicionado ao hash anterior e à sessão ativa impede sobrescrita por troca concorrente. O login adquire a atualização da mesma linha e confere o hash verificado antes de emitir uma sessão, impedindo emissão tardia com senha antiga.
+- Senha atual incorreta usa `400 SENHA_ATUAL_INCORRETA`, mantendo o usuário autenticado para tentar novamente. Outros erros de validação também são `400`; ausência de sessão válida é `401`, falta de perfil é `403`. O limite específico é de cinco requisições a cada 15 minutos por administrador, com `429` e `Retry-After`.
+- A redação central inclui os três novos campos sensíveis. O serializador de requisições omite query e sufixos na URL de troca para não registrar uma tentativa inválida de enviar senha pela URL. Logs da operação registram somente o ID do usuário e o resultado. Erros internos continuam genéricos.
+- O formulário guarda os valores somente nos inputs do componente, limpa-os após cada tentativa e na desmontagem, impede envios duplicados e é protegido também no próprio componente. Após `204`, o estado autenticado e CSRF são limpos, um CSRF anônimo é obtido e o login apresenta o aviso de sucesso.
+- Evidências: `backend/test/passwordChange.test.js`, `backend/test/passwordChangeDatabase.test.js` e `frontend/test/passwordChange.test.jsx`; incluem falha transacional, concorrência, duas sessões anteriores, novo login, logs capturados em memória, acesso indevido e limpeza dos campos. A integração usa somente fixture fictícia em transação com rollback, sem alterar usuários existentes.
+- Não houve migration ou dependência adicional. O procedimento de recuperação operacional de senha esquecida está no README e requer manutenção autorizada; não há recuperação automática nesta etapa.
+- Verificação do checkpoint 7B.1: 254 testes do backend e 97 do frontend aprovados. As nove integrações puladas na suíte comum por ausência de `DATABASE_URL` foram executadas na suíte MySQL (11 testes aprovados ao todo, com rollback). Lint, builds, Prisma generate/validate e estado das quatro migrations passaram. Auditorias completas e de produção de backend/frontend retornaram zero vulnerabilidades. Os testes de logs verificaram ausência de senhas fictícias, hashes, cookies e CSRF na saída capturada. Nenhuma credencial real foi usada nas fixtures ou versionada.
 
 ## Comandos de verificação
 

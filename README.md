@@ -2,7 +2,7 @@
 
 Sistema web para controle de equipamentos vinculados a contratos OneCare.
 
-O projeto está na Etapa 7B: além do controle operacional e das notificações internas, há autenticação por contas individuais, controle de acesso entre `ADMIN` e `VISUALIZADOR` e uma camada de segurança revisada para a futura preparação de produção. O envio por e-mail não faz parte desta etapa e permanece reservado para a Etapa 6B.
+O projeto está na Etapa 7B.1: além do controle operacional, notificações internas e segurança revisada, o administrador pode alterar a própria senha com confirmação da senha atual e encerramento de todas as suas sessões. O envio por e-mail permanece reservado para a Etapa 6B.
 
 ## Tecnologias
 
@@ -102,7 +102,27 @@ O token CSRF é vinculado ao cookie da sessão e toda operação mutável exige 
 
 Os limites em memória são adequados a uma instância local. Antes de escalar horizontalmente, a Etapa 7C deverá movê-los para um armazenamento compartilhado e configurar somente os proxies confiáveis. Consulte [docs/seguranca.md](docs/seguranca.md) para evidências, testes e pendências.
 
-Pendência futura: implementar “Alterar minha senha” para o administrador, exigindo a senha atual, a nova senha e sua confirmação. A alteração deverá manter o hash Argon2id e revogar as demais sessões administrativas. Até essa funcionalidade ser autorizada, a senha do administrador não pode ser alterada pela interface ou pelas rotas atuais.
+### Alterar a própria senha — Etapa 7B.1
+
+Entre como administrador e clique em “Alterar minha senha” no menu. Informe “Senha atual”, “Nova senha” e “Confirmar nova senha”. A nova senha deve ter de 8 a 128 caracteres, ser diferente da atual e coincidir exatamente com a confirmação. Os três campos rejeitam vazio ou somente espaços; senhas válidas preservam espaços e diferenças de caixa. Os campos são limpos após cada tentativa e ao sair do formulário.
+
+A API `PATCH /auth/senha` aceita somente o objeto JSON com `senhaAtual`, `novaSenha` e `confirmacaoNovaSenha`, sem identificador de usuário ou query string. Exige sessão ativa de `ADMIN`, origem permitida e CSRF vinculado à sessão. O limite é de cinco requisições por administrador a cada 15 minutos por instância, com `429` e `Retry-After` ao exceder. O limite de corpo permanece em 64 KiB.
+
+Sucesso retorna `204 No Content`: atualiza o hash Argon2id e revoga **todas** as sessões desse administrador na mesma transação, incluindo a atual. Os cookies de sessão e CSRF são expirados. A interface informa o sucesso, obtém um CSRF anônimo novo e mostra o login. A senha anterior e as sessões antigas deixam de funcionar. Isso substitui a previsão anterior de preservar a sessão atual. Sessões de outros usuários não são afetadas.
+
+Senha atual incorreta retorna `400 SENHA_ATUAL_INCORRETA`, sem encerrar sessões. Confirmação diferente, reutilização, tipos inválidos e campos inesperados também retornam `400`. Sessão inválida retorna `401`; visualizador recebe `403`. Erros inesperados permanecem genéricos. O login confere novamente o hash autenticado dentro da transação, impedindo que uma autenticação iniciada com a senha antiga emita uma sessão depois da troca.
+
+### Recuperação operacional se o administrador esquecer a senha
+
+Não existe recuperação pela interface ou por e-mail. `admin:create` continua destinado apenas à criação inicial e não substitui o administrador existente. Se não souber a senha atual, solicite manutenção autorizada ao responsável técnico:
+
+1. Confirmar a identidade e a autorização do responsável pela conta e identificar o banco OneCare correto.
+2. Interromper temporariamente o backend e criar um backup protegido, fora do Git, antes da manutenção.
+3. Em ambiente restrito, receber a nova senha por entrada interativa oculta, com confirmação; nunca por argumento de comando, URL, arquivo versionado ou mensagem de log.
+4. Validar a política de 8 a 128 caracteres e gerar o hash com os mesmos `ARGON2_OPTIONS` de `authService.js`. Em uma única transação Prisma, atualizar somente `senhaHash` do administrador identificado e revogar todas as suas sessões. Preservar o usuário, seu perfil e os demais dados. Qualquer falha deve reverter a transação.
+5. Reiniciar o serviço e conferir o novo login e a rejeição das sessões antigas. Registrar somente responsável, data e resultado da manutenção, sem senha, hash ou token.
+
+Esse é um procedimento de manutenção que exige execução técnica autorizada; esta etapa não adiciona um comando de recuperação nem executa essa operação sobre o administrador existente.
 
 ## Desenvolvimento
 
@@ -203,6 +223,7 @@ GET   /auth/csrf
 POST  /auth/login
 GET   /auth/me
 POST  /auth/logout
+PATCH /auth/senha
 GET   /usuarios
 POST  /usuarios
 PATCH /usuarios/:id/status

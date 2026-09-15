@@ -37,10 +37,23 @@ export const LOGGER_REDACT_PATHS = Object.freeze([
   '*.password',
   '*.senha',
   '*.senhaHash',
+  ...['senhaAtual', 'novaSenha', 'confirmacaoNovaSenha'].flatMap((field) =>
+    [field, `*.${field}`, `req.body.${field}`]),
 ])
 
 export function securityLoggerOptions() {
-  return { redact: { paths: [...LOGGER_REDACT_PATHS], censor: '[REMOVIDO]' } }
+  return {
+    redact: { paths: [...LOGGER_REDACT_PATHS], censor: '[REMOVIDO]' },
+    serializers: {
+      req(request) {
+        // Mesmo uma tentativa inválida de enviar senha pela URL não deve logá-la.
+        return { method: request.method,
+          url: request.url?.startsWith('/auth/senha') ? '/auth/senha' : request.url,
+          host: request.headers?.host, remoteAddress: request.ip,
+          remotePort: request.socket?.remotePort }
+      },
+    },
+  }
 }
 
 export function csrfUserInfo(sessionToken) {

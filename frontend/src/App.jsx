@@ -4,6 +4,7 @@ import Equipamentos from './pages/Equipamentos.jsx'
 import Notificacoes from './pages/Notificacoes.jsx'
 import Login from './pages/Login.jsx'
 import Usuarios from './pages/Usuarios.jsx'
+import AlterarSenha from './pages/AlterarSenha.jsx'
 import { notificacoesApi } from './services/api.js'
 import { AuthProvider } from './auth/AuthContext.jsx'
 import { useAuth } from './auth/authState.js'
@@ -46,6 +47,7 @@ function AppContent() {
             <button type="button" className="btn btn-secondary" aria-current={destination.page === 'equipamentos' ? 'page' : undefined} onClick={() => showEquipamentos()}>Equipamentos</button>
             {admin && <button type="button" className="btn btn-secondary gap-2" aria-current={destination.page === 'notificacoes' ? 'page' : undefined} aria-label={`Notificações, ${unreadCount} não lida${unreadCount === 1 ? '' : 's'}`} onClick={() => setDestination({ page: 'notificacoes' })}><span aria-hidden="true">🔔</span> Notificações {unreadCount > 0 && <span className="rounded-full bg-red-700 px-2 py-0.5 text-xs text-white">{unreadCount}</span>}</button>}
             {admin && <button type="button" className="btn btn-secondary" aria-current={destination.page === 'usuarios' ? 'page' : undefined} onClick={() => setDestination({ page: 'usuarios' })}>Usuários</button>}
+            {admin && <button type="button" className="btn btn-secondary" aria-current={destination.page === 'senha' ? 'page' : undefined} onClick={() => setDestination({ page: 'senha' })}>Alterar minha senha</button>}
             <span className="self-center px-2 text-xs text-slate-600">{user.username} · {admin ? 'Administrador' : 'Visualizador'}</span>
             <button type="button" className="btn btn-secondary" onClick={logout}>Sair</button>
           </nav>
@@ -57,6 +59,7 @@ function AppContent() {
         {destination.page === 'equipamentos' && <Equipamentos canManage={admin} key={`${destination.mode}-${destination.status}`} initialMode={destination.mode} initialStatus={destination.status} />}
         {admin && destination.page === 'notificacoes' && <Notificacoes onUnreadCountChange={updateUnreadCount} />}
         {admin && destination.page === 'usuarios' && <Usuarios />}
+        {admin && destination.page === 'senha' && <AlterarSenha onCancel={() => showEquipamentos()} />}
       </main>
     </>
   )
