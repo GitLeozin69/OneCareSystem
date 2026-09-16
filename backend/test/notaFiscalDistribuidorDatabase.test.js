@@ -3,20 +3,20 @@ import { randomUUID } from 'node:crypto'
 import test from 'node:test'
 
 import { buildApp } from '../src/app.js'
-import { createPrismaClient } from '../src/lib/prisma.js'
+import { createTestPrismaClient as createPrismaClient } from './helpers/testDatabase.js'
 import { createEquipamentoService } from '../src/services/equipamentoService.js'
 
-const databaseTestEnabled = Boolean(process.env.DATABASE_URL)
+const databaseTestEnabled = Boolean(process.env.TEST_DATABASE_URL)
 
-function assertDevelopmentDatabase() {
-  const url = new URL(process.env.DATABASE_URL)
-  assert.equal(decodeURIComponent(url.pathname.slice(1)).toLowerCase(), 'zebraonecare')
+function assertTestDatabase() {
+  const url = new URL(process.env.TEST_DATABASE_URL)
+  assert.equal(decodeURIComponent(url.pathname.slice(1)).toLowerCase(), 'zebraonecaretest')
 }
 
 test('migration criou colunas seguras sem índices únicos', {
-  skip: databaseTestEnabled ? false : 'requer DATABASE_URL configurada',
+  skip: databaseTestEnabled ? false : 'requer TEST_DATABASE_URL configurada',
 }, async () => {
-  assertDevelopmentDatabase()
+  assertTestDatabase()
   const prisma = createPrismaClient()
 
   try {
@@ -79,9 +79,9 @@ test('migration criou colunas seguras sem índices únicos', {
 })
 
 test('MySQL aceita campos repetidos e API mantém regras em transação revertida', {
-  skip: databaseTestEnabled ? false : 'requer DATABASE_URL configurada',
+  skip: databaseTestEnabled ? false : 'requer TEST_DATABASE_URL configurada',
 }, async () => {
-  assertDevelopmentDatabase()
+  assertTestDatabase()
   const prisma = createPrismaClient()
   const rollback = new Error('ROLLBACK_NOTA_DISTRIBUIDOR_TEST')
   const prefix = randomUUID().replaceAll('-', '').toUpperCase()

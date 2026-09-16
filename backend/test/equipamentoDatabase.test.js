@@ -2,13 +2,13 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import { buildApp } from '../src/app.js'
+import { createTestPrismaClient as createPrismaClient } from './helpers/testDatabase.js'
 import {
-  createPrismaClient,
   normalizeDatabaseUrl,
 } from '../src/lib/prisma.js'
 import { createEquipamentoService } from '../src/services/equipamentoService.js'
 
-const databaseTestEnabled = Boolean(process.env.DATABASE_URL)
+const databaseTestEnabled = Boolean(process.env.TEST_DATABASE_URL)
 
 test('configura host, pool e timeouts sem expor credenciais', () => {
   const normalized = new URL(
@@ -35,17 +35,17 @@ test('limita a recuperação automática da chave RSA a conexões locais', () =>
 
 test(
   'ciclo de equipamento e histórico funcionam com o MySQL real sem persistir dados',
-  { skip: databaseTestEnabled ? false : 'requer DATABASE_URL configurada' },
+  { skip: databaseTestEnabled ? false : 'requer TEST_DATABASE_URL configurada' },
   async () => {
-    const url = new URL(process.env.DATABASE_URL)
-    assert.equal(decodeURIComponent(url.pathname.slice(1)).toLowerCase(), 'zebraonecare')
+    const url = new URL(process.env.TEST_DATABASE_URL)
+    assert.equal(decodeURIComponent(url.pathname.slice(1)).toLowerCase(), 'zebraonecaretest')
     const prisma = createPrismaClient()
     const rollback = new Error('ROLLBACK_TEST_TRANSACTION')
     let serialNumber
 
     try {
       const [database] = await prisma.$queryRawUnsafe('SELECT DATABASE() AS name')
-      assert.equal(database.name.toLowerCase(), 'zebraonecare')
+      assert.equal(database.name.toLowerCase(), 'zebraonecaretest')
       await prisma.$transaction(async (transaction) => {
         const scopedPrisma = {
           equipamento: transaction.equipamento,

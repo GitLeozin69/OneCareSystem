@@ -2,17 +2,17 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import { buildApp } from '../src/app.js'
-import { createPrismaClient } from '../src/lib/prisma.js'
+import { createTestPrismaClient as createPrismaClient } from './helpers/testDatabase.js'
 import { createDashboardService } from '../src/services/dashboardService.js'
 
-const databaseTestEnabled = Boolean(process.env.DATABASE_URL)
+const databaseTestEnabled = Boolean(process.env.TEST_DATABASE_URL)
 
 test(
   'dashboard consulta o MySQL real sem alterar dados',
-  { skip: databaseTestEnabled ? false : 'requer DATABASE_URL configurada' },
+  { skip: databaseTestEnabled ? false : 'requer TEST_DATABASE_URL configurada' },
   async () => {
-    const url = new URL(process.env.DATABASE_URL)
-    assert.equal(decodeURIComponent(url.pathname.slice(1)).toLowerCase(), 'zebraonecare')
+    const url = new URL(process.env.TEST_DATABASE_URL)
+    assert.equal(decodeURIComponent(url.pathname.slice(1)).toLowerCase(), 'zebraonecaretest')
     const prisma = createPrismaClient()
     const clock = () => new Date('2026-09-11T13:00:00.000Z')
     const dashboardService = createDashboardService({ prisma, clock })
@@ -20,7 +20,7 @@ test(
 
     try {
       const [database] = await prisma.$queryRawUnsafe('SELECT DATABASE() AS name')
-      assert.equal(database.name.toLowerCase(), 'zebraonecare')
+      assert.equal(database.name.toLowerCase(), 'zebraonecaretest')
       const response = await app.inject({ method: 'GET', url: '/dashboard/resumo' })
       assert.equal(response.statusCode, 200)
       const body = response.json()

@@ -3,21 +3,21 @@ import { randomUUID } from 'node:crypto'
 import test from 'node:test'
 
 import { buildApp } from '../src/app.js'
-import { createPrismaClient } from '../src/lib/prisma.js'
+import { createTestPrismaClient as createPrismaClient } from './helpers/testDatabase.js'
 import { createNotificacaoService } from '../src/services/notificacaoService.js'
 
 test('notificações operam no MySQL real com unicidade e rollback dos dados de teste', {
-  skip: process.env.DATABASE_URL ? false : 'requer DATABASE_URL configurada',
+  skip: process.env.TEST_DATABASE_URL ? false : 'requer TEST_DATABASE_URL configurada',
 }, async () => {
-  const url = new URL(process.env.DATABASE_URL)
-  assert.equal(decodeURIComponent(url.pathname.slice(1)).toLowerCase(), 'zebraonecare')
+  const url = new URL(process.env.TEST_DATABASE_URL)
+  assert.equal(decodeURIComponent(url.pathname.slice(1)).toLowerCase(), 'zebraonecaretest')
   const prisma = createPrismaClient()
   const rollback = new Error('ROLLBACK_NOTIFICACAO_TEST')
   const serial = `NOT${randomUUID().replaceAll('-', '').toUpperCase()}`
 
   try {
     const [database] = await prisma.$queryRawUnsafe('SELECT DATABASE() AS name')
-    assert.equal(database.name.toLowerCase(), 'zebraonecare')
+    assert.equal(database.name.toLowerCase(), 'zebraonecaretest')
     await assert.rejects(prisma.$transaction(async (tx) => {
       const created = await tx.equipamento.create({ data: {
         serialNumber: serial,

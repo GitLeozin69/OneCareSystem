@@ -5,20 +5,20 @@ import test from 'node:test'
 import argon2 from 'argon2'
 
 import { buildApp } from '../src/app.js'
-import { createPrismaClient } from '../src/lib/prisma.js'
+import { createTestPrismaClient as createPrismaClient } from './helpers/testDatabase.js'
 import { createAuthService } from '../src/services/authService.js'
 
 test('login, sessão e logout operam no MySQL real com rollback integral', {
-  skip: process.env.DATABASE_URL ? false : 'requer DATABASE_URL configurada',
+  skip: process.env.TEST_DATABASE_URL ? false : 'requer TEST_DATABASE_URL configurada',
 }, async () => {
-  const url = new URL(process.env.DATABASE_URL)
-  assert.equal(decodeURIComponent(url.pathname.slice(1)).toLowerCase(), 'zebraonecare')
+  const url = new URL(process.env.TEST_DATABASE_URL)
+  assert.equal(decodeURIComponent(url.pathname.slice(1)).toLowerCase(), 'zebraonecaretest')
   const prisma = createPrismaClient()
   const rollback = new Error('ROLLBACK_AUTH_TEST')
   const username = `viewer_${randomUUID().replaceAll('-', '').slice(0, 20)}`
   try {
     const [database] = await prisma.$queryRawUnsafe('SELECT DATABASE() AS name')
-    assert.equal(database.name.toLowerCase(), 'zebraonecare')
+    assert.equal(database.name.toLowerCase(), 'zebraonecaretest')
     await assert.rejects(prisma.$transaction(async (tx) => {
       const user = await tx.usuario.create({ data: {
         username, senhaHash: await argon2.hash('senha real de teste!', { type: argon2.argon2id }), role: 'VISUALIZADOR',

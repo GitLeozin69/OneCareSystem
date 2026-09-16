@@ -1,5 +1,7 @@
 # Revisão de segurança — Etapa 7B
 
+> Registro histórico. A auditoria atual e os requisitos de hospedagem são apresentados em [auditoria-seguranca-pre-producao.md](auditoria-seguranca-pre-producao.md), Etapa 7D. Os testes de integração atuais usam exclusivamente `TEST_DATABASE_URL`/`ZebraOneCareTest`; as referências abaixo ao banco operacional e à Etapa 7C descrevem o checkpoint anterior, não autorizam esse uso atual.
+
 Revisão executada antes da preparação de hospedagem. Ela cobre o código atual e o ambiente local; não representa pentest de infraestrutura externa. Nenhum segredo, credencial ou dado completo de planilha foi registrado neste documento.
 
 ## Resultado por controle

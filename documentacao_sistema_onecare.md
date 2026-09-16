@@ -955,7 +955,7 @@ Toda operação `POST`, `PATCH`, `PUT` ou `DELETE` exige token CSRF no cabeçalh
 
 A Etapa 7B vincula o token CSRF à sessão, restringe métodos e cabeçalhos CORS, adiciona cabeçalhos HTTP defensivos e impede cache público das respostas. Corpos JSON comuns têm limite de 64 KiB; o multipart Excel mantém o limite próprio de 10 MB. Login, importação, administração de usuários e demais requisições recebem limites proporcionais com resposta 429 e `Retry-After`. Esses contadores ficam em memória e deverão usar armazenamento compartilhado se houver mais de uma instância.
 
-O backend não confia em `X-Forwarded-For` por padrão. A configuração de proxy confiável pertence à Etapa 7C, depois da escolha da hospedagem. Em produção, `NODE_ENV=production`, origens HTTPS, cookie seguro, segredo CSRF externo e autenticação completa são obrigatórios. O relatório detalhado está em `docs/seguranca.md`.
+O backend não confia em `X-Forwarded-For` por padrão. A configuração efetiva de proxy confiável deverá ser comprovada na Etapa 8, depois da escolha da hospedagem. Em produção, `NODE_ENV=production`, origens HTTPS, cookie seguro, segredo CSRF externo e autenticação completa são obrigatórios. Os relatórios estão em `docs/seguranca.md` e `docs/auditoria-seguranca-pre-producao.md`.
 
 Na Etapa 7B.1, o administrador ativo pode alterar a própria senha em “Alterar minha senha”, através de `PATCH /auth/senha`. O corpo JSON contém somente `senhaAtual`, `novaSenha` e `confirmacaoNovaSenha`; query string não é aceita. A nova senha deve ter de 8 a 128 caracteres, diferir da atual e coincidir exatamente com a confirmação. Os três valores são strings não vazias e não compostas somente por espaços, sem normalização silenciosa. A senha atual é verificada contra o hash armazenado.
 
@@ -1177,12 +1177,22 @@ Implementado:
 - limpeza dos campos e novo login obrigatório após sucesso;
 - testes isolados, integração MySQL com rollback e procedimento operacional no README.
 
-Permanece futuro, somente após autorização:
-- interface;
-- responsividade;
-- tratamento de erros;
-- testes;
-- documentação.
+### Etapa 7D — Auditoria final de segurança pré-produção
+
+- auditoria de código, configuração, dependências, permissões, sessões, logs e integridade;
+- senhas somente com espaços rejeitadas na criação e alteração/redefinição, sem normalização de senhas válidas;
+- validação HTTP sem coerção de tipos, limite de login incluindo solicitações simultâneas e logs sem URLs livres;
+- edição contratual condicionada ao estado lido: conflitos concorrentes retornam `409 CONFLITO_ATUALIZACAO`, revertendo a tentativa e seu histórico;
+- falha de rede no logout é informada, sem simular revogação da sessão;
+- integrações exclusivas no MySQL local `ZebraOneCareTest`, usando `TEST_DATABASE_URL` e rollback, nunca o banco operacional;
+- evidências, achados residuais e conclusão no relatório dedicado; isso não equivale à publicação nem à garantia absoluta de segurança.
+
+### Etapa 8 — Preparação de produção (somente após autorização)
+
+- hospedagem, domínios, HTTPS, headers do frontend, proxy e CORS efetivos;
+- segredos externos, usuário MySQL de menor privilégio e TLS validado;
+- backups/restauração, limites de borda, timeouts, logs e monitoramento;
+- revalidação dos controles no ambiente definitivo, antes de liberar acesso público.
 
 ## 34. Regras para o agente de desenvolvimento
 

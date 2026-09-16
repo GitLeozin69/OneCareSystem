@@ -36,11 +36,15 @@ export function AuthProvider({ children, initialUser }) {
   }, [setCsrf])
 
   const logout = useCallback(async () => {
-    try { await authApi.logout() } finally {
-      setUser(null); setCsrf(''); setNotice('')
-      const result = await authApi.csrf().catch(() => null)
-      if (result) setCsrf(result.csrfToken)
+    try { await authApi.logout() } catch (error) {
+      if (error.status !== 401) {
+        setNotice('Não foi possível encerrar a sessão. Verifique a conexão e tente sair novamente.')
+      }
+      return
     }
+    setUser(null); setCsrf(''); setNotice('')
+    const result = await authApi.csrf().catch(() => null)
+    if (result) setCsrf(result.csrfToken)
   }, [setCsrf])
 
   const changeOwnPassword = useCallback(async (payload) => {

@@ -2,15 +2,15 @@ import assert from 'node:assert/strict'
 import { randomUUID } from 'node:crypto'
 import test from 'node:test'
 import { buildApp } from '../src/app.js'
-import { createPrismaClient } from '../src/lib/prisma.js'
+import { createTestPrismaClient as createPrismaClient } from './helpers/testDatabase.js'
 import { createImportacaoService } from '../src/services/importacaoService.js'
 import { normalizeCreateEquipamento } from '../src/utils/equipamentoValidation.js'
 import { workbook, exampleRow, multipartPayload } from './helpers/excelFixture.js'
 
 test('importação MySQL real: prévia sem escrita, confirmação integral e rollback por conflito', {
-  skip: process.env.DATABASE_URL ? false : 'requer DATABASE_URL configurada',
+  skip: process.env.TEST_DATABASE_URL ? false : 'requer TEST_DATABASE_URL configurada',
 }, async () => {
-  assert.equal(new URL(process.env.DATABASE_URL).pathname.toLowerCase(), '/zebraonecare')
+  assert.equal(new URL(process.env.TEST_DATABASE_URL).pathname.toLowerCase(), '/zebraonecaretest')
   const prisma = createPrismaClient()
   const prefix = 'IMP' + randomUUID().replaceAll('-', '').toUpperCase()
   const rollback = new Error('ROLLBACK_IMPORTACAO_TEST')

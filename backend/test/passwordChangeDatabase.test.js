@@ -4,21 +4,21 @@ import test from 'node:test'
 import argon2 from 'argon2'
 
 import { buildApp } from '../src/app.js'
-import { createPrismaClient } from '../src/lib/prisma.js'
+import { createTestPrismaClient as createPrismaClient } from './helpers/testDatabase.js'
 import { ARGON2_OPTIONS, createAuthService } from '../src/services/authService.js'
 import { changedPassword, httpLogin, originalPassword, passwordPayload } from './helpers/authFixture.js'
 
 test('MySQL: troca própria e revogação integral com dados fictícios e rollback', {
-  skip: process.env.DATABASE_URL ? false : 'requer DATABASE_URL configurada',
+  skip: process.env.TEST_DATABASE_URL ? false : 'requer TEST_DATABASE_URL configurada',
 }, async () => {
-  const url = new URL(process.env.DATABASE_URL)
-  assert.equal(decodeURIComponent(url.pathname.slice(1)).toLowerCase(), 'zebraonecare')
+  const url = new URL(process.env.TEST_DATABASE_URL)
+  assert.equal(decodeURIComponent(url.pathname.slice(1)).toLowerCase(), 'zebraonecaretest')
   const prisma = createPrismaClient()
   const rollback = new Error('ROLLBACK_PASSWORD_CHANGE_TEST')
   const username = `pw_${randomUUID().replaceAll('-', '').slice(0, 20)}`
   try {
     const [database] = await prisma.$queryRawUnsafe('SELECT DATABASE() AS name')
-    assert.equal(database.name.toLowerCase(), 'zebraonecare')
+    assert.equal(database.name.toLowerCase(), 'zebraonecaretest')
     await assert.rejects(prisma.$transaction(async (tx) => {
       // Fixture isolada sem ocupar o adminSlot do administrador existente.
       const user = await tx.usuario.create({ data: { username, role: 'ADMIN', adminSlot: null,

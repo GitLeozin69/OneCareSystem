@@ -46,10 +46,10 @@ export function securityLoggerOptions() {
     redact: { paths: [...LOGGER_REDACT_PATHS], censor: '[REMOVIDO]' },
     serializers: {
       req(request) {
-        // Mesmo uma tentativa inválida de enviar senha pela URL não deve logá-la.
+        // Somente o template registrado: nunca URL, parâmetros ou headers livres.
         return { method: request.method,
-          url: request.url?.startsWith('/auth/senha') ? '/auth/senha' : request.url,
-          host: request.headers?.host, remoteAddress: request.ip,
+          url: request.routeOptions?.url ?? '[rota não encontrada]',
+          remoteAddress: request.ip,
           remotePort: request.socket?.remotePort }
       },
     },
@@ -93,11 +93,12 @@ export function readSecurityConfig(env = process.env) {
   const cookieSecure = parseBoolean(env.COOKIE_SECURE, production)
   if (production && !cookieSecure) throw new Error('COOKIE_SECURE deve ser true em produção.')
   if (production && !env.FRONTEND_ORIGIN) throw new Error('FRONTEND_ORIGIN é obrigatório em produção.')
-  if (production && (!env.CSRF_SECRET || env.CSRF_SECRET.length < 32)) {
+  if (production && (!env.CSRF_SECRET?.trim() || env.CSRF_SECRET.length < 32)) {
     throw new Error('CSRF_SECRET com pelo menos 32 caracteres é obrigatório em produção.')
   }
-  const duration = Number.parseInt(env.SESSION_DURATION_HOURS ?? '8', 10)
-  if (!Number.isInteger(duration) || duration < 1 || duration > 168) {
+  const durationText = env.SESSION_DURATION_HOURS ?? '8'
+  const duration = Number(durationText)
+  if (!/^\d+$/.test(durationText) || !Number.isInteger(duration) || duration < 1 || duration > 168) {
     throw new Error('SESSION_DURATION_HOURS deve ser um inteiro entre 1 e 168.')
   }
   const allowedOrigins = parseOrigins(env.FRONTEND_ORIGIN)

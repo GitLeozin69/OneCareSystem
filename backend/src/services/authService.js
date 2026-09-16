@@ -56,11 +56,12 @@ export function createAuthService({ prisma, sessionDurationHours = 8, clock = ()
       throw new AppError({ statusCode: 429, code: 'LIMITE_LOGIN', message: 'Muitas tentativas. Aguarde 15 minutos e tente novamente.', retryAfterSeconds })
     }
 
+    // Reserva antes do primeiro await: solicitações paralelas também contam.
+    attempt.count += 1
     const user = await prisma.usuario.findUnique({ where: { username } })
     const hash = user?.senhaHash ?? await dummyHash
     const valid = typeof password === 'string' && await argon2.verify(hash, password).catch(() => false)
     if (!user || !user.ativo || !valid) {
-      attempt.count += 1
       throw invalidCredentials()
     }
 

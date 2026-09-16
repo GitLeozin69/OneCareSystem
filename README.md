@@ -2,7 +2,7 @@
 
 Sistema web para controle de equipamentos vinculados a contratos OneCare.
 
-O projeto está na Etapa 7B.1: além do controle operacional, notificações internas e segurança revisada, o administrador pode alterar a própria senha com confirmação da senha atual e encerramento de todas as suas sessões. O envio por e-mail permanece reservado para a Etapa 6B.
+O checkpoint atual é a Etapa 7D — auditoria final de segurança pré-produção. O relatório, evidências e requisitos ainda necessários para hospedagem estão em [docs/auditoria-seguranca-pre-producao.md](docs/auditoria-seguranca-pre-producao.md). Não houve publicação. O envio por e-mail permanece reservado para a Etapa 6B.
 
 ## Tecnologias
 
@@ -100,7 +100,9 @@ O frontend mantém o token CSRF somente em memória, envia cookies com `credenti
 
 O token CSRF é vinculado ao cookie da sessão e toda operação mutável exige origem permitida. Sessões antigas apresentadas durante um novo login são revogadas; sessões expiradas são removidas durante autenticações bem-sucedidas. As senhas usam Argon2id com parâmetros explícitos. A API aplica headers de segurança, `Cache-Control: no-store`, limite de 64 KiB para corpos JSON comuns e limites de requisição em memória. O upload Excel preserva seu limite independente de 10 MB.
 
-Os limites em memória são adequados a uma instância local. Antes de escalar horizontalmente, a Etapa 7C deverá movê-los para um armazenamento compartilhado e configurar somente os proxies confiáveis. Consulte [docs/seguranca.md](docs/seguranca.md) para evidências, testes e pendências.
+Os limites em memória atendem à instância local, mas não substituem proteção de borda. Antes de escalar horizontalmente, a Etapa 8 deverá utilizar contadores compartilhados e configurar somente os proxies confiáveis. Consulte [docs/seguranca.md](docs/seguranca.md) e o relatório 7D para evidências e pendências.
+
+Na revisão 7D, tentativas simultâneas passaram a contar antes do acesso ao banco; senhas somente com espaços são recusadas também no cadastro/redefinição e CLI. A API rejeita tipos incorretos sem convertê-los. Logs registram o template da rota, nunca URL livre, parâmetros ou query; 404 e 415 possuem respostas genéricas padronizadas. Falhas de conexão ao sair não simulam logout bem-sucedido: a interface mantém a sessão visível e orienta nova tentativa. Uma edição com contrato obsoleto ou equipamento arquivado durante a operação retorna `409 CONFLITO_ATUALIZACAO` e reverte seu histórico, sem alterar as regras contratuais.
 
 ### Alterar a própria senha — Etapa 7B.1
 
@@ -409,7 +411,18 @@ npm.cmd run build
 
 O Vitest foi configurado seguindo seu [guia oficial](https://vitest.dev/guide/); o proxy usa a [configuração oficial do Vite](https://vite.dev/config/server-options.html#server-proxy).
 
-Os testes de integração usam exclusivamente o banco de desenvolvimento `ZebraOneCare` configurado no `.env`. Exercitam cadastro, consulta, edição, histórico, arquivamento, listagem de arquivados, restauração, nota fiscal e distribuidor repetíveis, reserva de patrimônio em arquivados, múltiplos `NULL` e rejeição de duplicidade pelo índice real. As transações fazem rollback ao final, sem manter equipamentos de teste nem apagar registros existentes; podem ocorrer lacunas normais nos IDs auto-incrementais. O build do backend verifica a sintaxe dos arquivos JavaScript. O frontend gera os arquivos de produção em `frontend/dist`.
+As integrações agora exigem `TEST_DATABASE_URL` apontando exclusivamente para **ZebraOneCareTest**, em MySQL local, fora de produção. Nunca há fallback para `DATABASE_URL`/`ZebraOneCare`. Configure a URL real somente no `.env` local, sem versioná-la. O comando explícito de integração falha se essa configuração estiver ausente; a suíte comum pula os testes de banco quando ela não está carregada.
+
+Na preparação, peça ao responsável pelo MySQL a criação do banco vazio `ZebraOneCareTest` e suas permissões. Com `TEST_DATABASE_URL` preenchida, aplique as migrations existentes somente nele:
+
+```powershell
+npm.cmd --prefix backend run db:test:deploy
+npm.cmd run test:integration
+```
+
+O primeiro comando valida o destino antes de executar Prisma; não cria, apaga ou reseta bancos. Durante a auditoria 7D esse banco foi criado localmente e as quatro migrations existentes foram aplicadas, sem alteração do schema operacional. Nenhuma credencial foi gravada pelo agente no `.env`.
+
+As integrações exercitam autenticação, troca de senha, equipamentos, histórico, dashboard, notificações, importação, unicidade e rejeição de atualizações obsoletas. Fixtures são fictícias e as transações fazem rollback, sem apagar registros existentes; podem ocorrer lacunas nos IDs auto-incrementais. Testes de concorrência contratual simulam a leitura obsoleta determinísticamente, mas executam UPDATE condicional e rollback reais. O build do backend verifica sintaxe; o frontend gera os arquivos de produção em `frontend/dist`.
 
 ### Dependências e auditoria — checkpoint 3D.1
 

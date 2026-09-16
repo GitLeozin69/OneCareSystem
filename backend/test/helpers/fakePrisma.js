@@ -22,6 +22,9 @@ export function createEquipamentoRecord(overrides = {}) {
 }
 
 function matchesValue(value, condition) {
+  if (value instanceof Date && condition instanceof Date) {
+    return value.getTime() === condition.getTime()
+  }
   if (
     condition &&
     typeof condition === 'object' &&
@@ -100,7 +103,8 @@ export function createFakePrisma(initialEquipamentos = [], initialHistoricos = [
       },
 
       async update({ where, data }) {
-        const index = state.equipamentos.findIndex((item) => item.id === where.id)
+        const index = state.equipamentos.findIndex((item) => matchesWhere(item, where))
+        if (index === -1) throw Object.assign(new Error('Registro não encontrado'), { code: 'P2025' })
         const equipamento = {
           ...state.equipamentos[index],
           ...data,

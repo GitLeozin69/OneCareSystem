@@ -285,6 +285,28 @@ describe('Cadastro e edição', () => {
     expect((await screen.findByRole('alert')).textContent).toBe('Não foi possível processar a solicitação. Tente novamente.')
     expect(screen.queryByText(/senha-secreta/)).toBeNull()
   })
+
+  it('informa conflito de atualização sem expor resposta interna nem perder formulário', async () => {
+    render(<App />)
+    await ready()
+    click('Editar SN001')
+    await screen.findByDisplayValue('Cliente Teste')
+    fetchMock.mockResolvedValueOnce(json({ error: 'CONFLITO_ATUALIZACAO', message: 'detalhe privado' }, 409))
+    click('Salvar equipamento')
+    expect((await screen.findByRole('alert')).textContent).toContain('Atualize os dados e tente novamente')
+    expect(screen.getByLabelText('Cliente *').value).toBe('Cliente Teste')
+    expect(screen.queryByText('detalhe privado')).toBeNull()
+  })
+
+  it('conteúdo HTML armazenado é exibido como texto sem criar elementos executáveis', async () => {
+    const marker = '<img src=x onerror="window.auditExecuted=true">'
+    fetchMock.mockResolvedValue(json(list([{ ...item, cliente: marker }])))
+    const { container } = render(<App />)
+    await ready()
+    expect(screen.getByText(marker)).toBeTruthy()
+    expect(container.querySelector('img[onerror]')).toBeNull()
+    expect(window.auditExecuted).toBeUndefined()
+  })
 })
 
 describe('Datas e payload', () => {

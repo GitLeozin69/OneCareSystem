@@ -3,14 +3,14 @@ import { randomUUID } from 'node:crypto'
 import test from 'node:test'
 
 import { buildApp } from '../src/app.js'
-import { createPrismaClient } from '../src/lib/prisma.js'
+import { createTestPrismaClient as createPrismaClient } from './helpers/testDatabase.js'
 import { createEquipamentoService } from '../src/services/equipamentoService.js'
 
 test('MySQL garante patrimônio único global, múltiplos NULL e conflitos HTTP', {
-  skip: process.env.DATABASE_URL ? false : 'requer DATABASE_URL configurada',
+  skip: process.env.TEST_DATABASE_URL ? false : 'requer TEST_DATABASE_URL configurada',
 }, async () => {
-  const url = new URL(process.env.DATABASE_URL)
-  assert.equal(decodeURIComponent(url.pathname.slice(1)).toLowerCase(), 'zebraonecare')
+  const url = new URL(process.env.TEST_DATABASE_URL)
+  assert.equal(decodeURIComponent(url.pathname.slice(1)).toLowerCase(), 'zebraonecaretest')
   const prisma = createPrismaClient()
   const rollback = new Error('ROLLBACK_PATRIMONIO_TEST')
   const prefix = 'PATR' + randomUUID().replaceAll('-', '').toUpperCase()
@@ -38,7 +38,7 @@ test('MySQL garante patrimônio único global, múltiplos NULL e conflitos HTTP'
 
   try {
     const [database] = await prisma.$queryRawUnsafe('SELECT DATABASE() AS name')
-    assert.equal(database.name.toLowerCase(), 'zebraonecare')
+    assert.equal(database.name.toLowerCase(), 'zebraonecaretest')
     await assert.rejects(prisma.$transaction(async (tx) => {
       // Todas as rotas compartilham a transação de teste, revertida ao final.
       const scopedPrisma = {

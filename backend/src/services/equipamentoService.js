@@ -196,12 +196,19 @@ export function createEquipamentoService({ prisma, clock = () => new Date() }) {
           }
 
           return transaction.equipamento.update({
-            where: { id },
+            // O UPDATE verifica o estado lido mesmo sob o snapshot do MySQL.
+            // Um contrato alterado/arquivado durante a operação invalida a escrita
+            // e o rollback também remove o histórico desta tentativa.
+            where: { id, arquivado: false, ...contractSnapshot(current) },
             data: changes,
           })
         })
         return withOnecareStatus(equipamento, createOnecareReference(clock()))
       } catch (error) {
+        if (['P2025', 'P2034'].includes(error.code)) {
+          throw new AppError({ statusCode: 409, code: 'CONFLITO_ATUALIZACAO',
+            message: 'O equipamento foi alterado durante a operação. Atualize os dados e tente novamente.' })
+        }
         throw fromUniqueConstraintError(error) ?? error
       }
     },

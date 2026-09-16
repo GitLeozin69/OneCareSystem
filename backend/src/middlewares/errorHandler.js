@@ -62,6 +62,20 @@ export function errorHandler(error, request, reply) {
     })
   }
 
+  if (error.statusCode === 415) {
+    return reply.code(415).send({
+      error: 'TIPO_CONTEUDO_NAO_SUPORTADO',
+      message: 'Tipo de conteúdo não suportado.',
+      details: [],
+    })
+  }
+
+  if (error.statusCode === 414) {
+    return reply.code(414).send({
+      error: 'LIMITE_URL', message: 'A URL excede o limite permitido.', details: [],
+    })
+  }
+
   request.log.error(
     { errorName: error.name, errorCode: error.code },
     'Erro interno não tratado',

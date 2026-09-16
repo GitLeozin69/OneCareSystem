@@ -90,3 +90,17 @@ it('401 em consulta encerra o estado autenticado e informa sessão expirada', as
   await waitFor(() => expect(screen.getByRole('heading', { name: 'Entrar' })).toBeTruthy())
   expect(screen.getByText('Sua sessão expirou. Entre novamente.')).toBeTruthy()
 })
+
+it('falha de rede no logout não simula encerramento de uma sessão ainda válida', async () => {
+  vi.stubGlobal('fetch', vi.fn(async (url) => {
+    if (url === '/api/auth/logout') throw new TypeError('falha privada ficticia')
+    return response(emptyList)
+  }))
+  render(<App initialUser={viewer} />)
+  await screen.findByText('Nenhum equipamento nesta página')
+  fireEvent.click(screen.getByRole('button', { name: 'Sair' }))
+  expect(await screen.findByText(/Não foi possível encerrar a sessão/)).toBeTruthy()
+  expect(screen.getByText('consulta · Visualizador')).toBeTruthy()
+  expect(screen.queryByRole('heading', { name: 'Entrar' })).toBeNull()
+  expect(screen.queryByText('falha privada ficticia')).toBeNull()
+})

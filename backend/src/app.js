@@ -20,10 +20,14 @@ export function buildApp({ dashboardService, equipamentoService, importacaoServi
 
   const app = Fastify({
     bodyLimit: 64 * 1024,
-    ajv: { customOptions: { removeAdditional: false } },
+    ajv: { customOptions: { removeAdditional: false, coerceTypes: false } },
+    frameworkErrors: errorHandler,
     ...fastifyOptions,
   })
   app.setErrorHandler(errorHandler)
+  app.setNotFoundHandler((_request, reply) => reply.code(404).send({
+    error: 'ROTA_NAO_ENCONTRADA', message: 'Rota não encontrada.', details: [],
+  }))
 
   function registerApplicationRoutes(instance, secured = false) {
     instance.get('/health', { config: { access: 'PUBLIC', rateLimit: false } }, async () => ({ status: 'ok' }))
