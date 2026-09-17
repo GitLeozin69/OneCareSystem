@@ -1,3 +1,5 @@
+import { API_BASE_PATH } from '../config/apiConfig.js'
+
 const messages = {
   SERIAL_DUPLICADO: 'Já existe um equipamento com esse número de série.',
   PATRIMONIO_DUPLICADO: 'Já existe um equipamento com esse patrimônio.',
@@ -76,7 +78,7 @@ async function request(path, { signal, method = 'GET', body, suppressAuthEvents 
   if (body && !multipart) headers['Content-Type'] = 'application/json'
   if (mutating && csrfToken) headers['x-csrf-token'] = csrfToken
   try {
-    response = await fetch(`/api${path}`, {
+    response = await fetch(`${API_BASE_PATH}${path}`, {
       method,
       signal,
       credentials: 'include',

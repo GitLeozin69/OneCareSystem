@@ -2,6 +2,9 @@
   "name": "onecare-system",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=22.12.0 <25"
+  },
   "scripts": {
     "dev:backend": "npm --prefix backend run dev",
     "dev:frontend": "npm --prefix frontend run dev",

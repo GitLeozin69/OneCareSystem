@@ -41,8 +41,9 @@ export const LOGGER_REDACT_PATHS = Object.freeze([
     [field, `*.${field}`, `req.body.${field}`]),
 ])
 
-export function securityLoggerOptions() {
+export function securityLoggerOptions(level = 'info') {
   return {
+    level,
     redact: { paths: [...LOGGER_REDACT_PATHS], censor: '[REMOVIDO]' },
     serializers: {
       req(request) {
@@ -125,7 +126,7 @@ export async function registerSecurity(app, { authService, config }) {
   await app.register(cookie, { secret: signingSecret })
   await app.register(cors, {
     credentials: true,
-    methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'X-CSRF-Token'],
     strictPreflight: true,
     maxAge: 600,

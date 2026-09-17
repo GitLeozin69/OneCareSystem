@@ -2,7 +2,7 @@
 
 Sistema web para controle de equipamentos vinculados a contratos OneCare.
 
-O checkpoint atual é a Etapa 7D — auditoria final de segurança pré-produção. O relatório, evidências e requisitos ainda necessários para hospedagem estão em [docs/auditoria-seguranca-pre-producao.md](docs/auditoria-seguranca-pre-producao.md). Não houve publicação. O envio por e-mail permanece reservado para a Etapa 6B.
+O checkpoint atual é a Etapa 8A — preparação técnica para produção. A arquitetura, variáveis, comandos e checklists das futuras Etapas 8B/8C estão em [docs/deploy-producao.md](docs/deploy-producao.md); a auditoria anterior permanece em [docs/auditoria-seguranca-pre-producao.md](docs/auditoria-seguranca-pre-producao.md). Não houve publicação nem criação de serviços. O envio por e-mail permanece reservado para a Etapa 6B.
 
 ## Tecnologias
 
@@ -128,6 +128,12 @@ Esse é um procedimento de manutenção que exige execução técnica autorizada
 
 ## Desenvolvimento
 
+### Preparação para produção — Etapa 8A
+
+O frontend usa `/api` na mesma origem. Em desenvolvimento, Vite encaminha esse caminho para `VITE_DEV_API_ORIGIN` (padrão `http://127.0.0.1:3000`). Na Netlify, `npm run build:netlify` exige `API_PROXY_TARGET` HTTPS e gera o proxy antes do fallback SPA; segredos nunca devem usar o prefixo público `VITE_`.
+
+O backend de produção é iniciado por `npm start`, exige configuração completa, usa o `PORT` fornecido pela hospedagem, escuta em `0.0.0.0` e oferece `/health` e `/ready`. Migrations devem ser aplicadas separadamente com `npm run db:migrate:deploy`, nunca no startup. Consulte o guia de deploy antes de configurar Railway ou Netlify.
+
 Execute o backend:
 
 ```powershell
@@ -144,13 +150,14 @@ Por padrão:
 
 - backend: `http://localhost:3000`
 - verificação de saúde: `http://localhost:3000/health`
+- prontidão do banco: `http://localhost:3000/ready`
 - frontend: `http://127.0.0.1:5173` (porta fixa; se estiver ocupada, o Vite informa o erro)
 
-O exemplo usa `HOST=127.0.0.1` para não expor o backend à rede local. Na hospedagem, ajuste `HOST` apenas conforme a exigência do provedor.
+O exemplo usa `HOST=127.0.0.1` para não expor o backend à rede local. Em produção, o backend ignora esse valor e usa obrigatoriamente `0.0.0.0`, conforme a rede do Railway.
 
-O navegador chama `/api/equipamentos` na mesma origem do frontend. O proxy local do Vite remove `/api` e encaminha a chamada ao endereço definido em `VITE_API_URL` no `.env` da raiz (padrão: `http://127.0.0.1:3000`). O exemplo existente `http://localhost:3000` também pode ser usado. Reinicie o Vite após alterar essa configuração. O backend continua expondo `/equipamentos`, sem alteração de CORS.
+O navegador chama `/api/equipamentos` na mesma origem do frontend. O proxy local do Vite remove `/api` e encaminha a chamada ao endereço definido em `VITE_DEV_API_ORIGIN` no `.env` local do frontend (padrão: `http://127.0.0.1:3000`). Copie `frontend/.env.example` para `frontend/.env.local` somente se precisar alterar esse destino. Reinicie o Vite após a mudança. O backend continua expondo `/equipamentos`, sem alteração de CORS.
 
-O proxy também está configurado no `npm.cmd --prefix frontend run preview`. Para hospedagem futura dos arquivos estáticos, será necessário configurar o servidor de hospedagem para encaminhar `/api` ao backend; esse proxy do Vite serve apenas ao desenvolvimento/preview. Não coloque credenciais em variáveis `VITE_`, pois elas são públicas.
+O proxy também está configurado no `npm.cmd --prefix frontend run preview`, exclusivamente para validação local. Em produção, a regra é gerada para a Netlify conforme `docs/deploy-producao.md`. Não coloque credenciais em variáveis `VITE_`, pois elas são públicas.
 
 ### Interface de equipamentos
 

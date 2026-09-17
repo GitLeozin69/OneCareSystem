@@ -4,15 +4,15 @@
   "private": true,
   "type": "module",
   "engines": {
-    "node": ">=22.12.0"
+    "node": ">=22.12.0 <25"
   },
   "scripts": {
     "dev": "node --env-file-if-exists=../.env --watch src/server.js",
-    "start": "node --env-file-if-exists=../.env src/server.js",
+    "start": "node --env-file-if-exists=../.env scripts/startProduction.js",
     "lint": "eslint .",
     "test": "node --test \"test/*.test.js\"",
     "test:integration": "node --env-file-if-exists=../.env --import ./test/helpers/requireTestDatabase.js --test --test-concurrency=1 \"test/*Database.test.js\"",
-    "build": "node --check src/app.js && node --check src/server.js && node --check prisma.config.js",
+    "build": "prisma generate && node --check src/app.js && node --check src/server.js && node --check prisma.config.js",
     "db:validate": "prisma validate",
     "db:generate": "prisma generate",
     "db:migrate:deploy": "prisma migrate deploy",

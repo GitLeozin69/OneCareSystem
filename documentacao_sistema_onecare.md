@@ -1194,6 +1194,18 @@ Implementado:
 - backups/restauração, limites de borda, timeouts, logs e monitoramento;
 - revalidação dos controles no ambiente definitivo, antes de liberar acesso público.
 
+### Etapa 8A — Preparação técnica para Netlify e Railway
+
+- frontend e API comunicam-se por `/api` same-origin, com proxy da Netlify para o Railway;
+- cookies continuam `Secure`, `HttpOnly` e `SameSite=Strict`; CORS e CSRF usam a origem HTTPS exata do frontend;
+- o backend valida ambiente, porta, banco, origem e hosts antes de iniciar, usa `0.0.0.0` somente em produção e mantém `trustProxy=false` até comprovação da topologia publicada;
+- `/health` verifica o processo HTTP e `/ready` verifica o MySQL com timeout e resposta genérica;
+- `SIGTERM`/`SIGINT` fecham Fastify, Prisma e scheduler com prazo limitado;
+- o build da Netlify exige destino HTTPS do proxy, gera fallback SPA e headers/cache restritivos;
+- migrations de produção usam exclusivamente `prisma migrate deploy` em pre-deploy, nunca no startup;
+- a implantação inicial deve ter uma única réplica enquanto scheduler e rate limit forem locais;
+- detalhes operacionais e pendências das Etapas 8B/8C estão em `docs/deploy-producao.md`.
+
 ## 34. Regras para o agente de desenvolvimento
 
 O agente deve seguir estas regras:
