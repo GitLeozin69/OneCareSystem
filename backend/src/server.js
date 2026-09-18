@@ -10,6 +10,7 @@ import { startNotificacaoScheduler } from './services/notificacaoScheduler.js'
 import { createNotificacaoService } from './services/notificacaoService.js'
 import { createUsuarioService } from './services/usuarioService.js'
 import { installGracefulShutdown } from './utils/gracefulShutdown.js'
+import { runBootstrap } from './utils/bootstrapError.js'
 
 async function start() {
   const runtime = readRuntimeConfig()
@@ -66,4 +67,4 @@ async function start() {
   }
 }
 
-start().catch(() => { process.exitCode = 1 })
+await runBootstrap(start)
