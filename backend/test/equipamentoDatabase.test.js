@@ -23,14 +23,14 @@ test('configura host, pool e timeouts sem expor credenciais', () => {
   assert.equal(normalized.searchParams.get('connectTimeout'), '5000')
 })
 
-test('limita a recuperação automática da chave RSA a conexões locais', () => {
+test('habilita a recuperação da chave RSA na configuração entregue ao adaptador', () => {
   const remote = new URL(normalizeDatabaseUrl('mysql://usuario:segredo@db.example.com:3306/onecare'))
   const explicitLocal = new URL(normalizeDatabaseUrl(
     'mysql://usuario:segredo@127.0.0.1:3306/onecare?allowPublicKeyRetrieval=false',
   ))
 
-  assert.equal(remote.searchParams.has('allowPublicKeyRetrieval'), false)
-  assert.equal(explicitLocal.searchParams.get('allowPublicKeyRetrieval'), 'false')
+  assert.equal(remote.searchParams.get('allowPublicKeyRetrieval'), 'true')
+  assert.equal(explicitLocal.searchParams.get('allowPublicKeyRetrieval'), 'true')
 })
 
 test(

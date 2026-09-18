@@ -25,10 +25,7 @@ export function normalizeDatabaseUrl(databaseUrl) {
     url.hostname = '127.0.0.1'
   }
 
-  const isLoopback = ['127.0.0.1', '[::1]', '::1'].includes(url.hostname)
-  if (isLoopback && !url.searchParams.has('allowPublicKeyRetrieval')) {
-    url.searchParams.set('allowPublicKeyRetrieval', 'true')
-  }
+  url.searchParams.set('allowPublicKeyRetrieval', 'true')
 
   for (const [name, value] of Object.entries(POOL_DEFAULTS)) {
     if (!url.searchParams.has(name)) {
